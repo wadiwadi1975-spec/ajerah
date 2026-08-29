@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أُجَرَه — تطبيق التوصيل داخل سوريا</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Cairo', Tahoma, sans-serif;
+    background: linear-gradient(135deg, #021430 0%, #0B3A7A 50%, #374454 100%);
+    color: #E8C45A;
+    min-height: 100vh;
+  }
+  header {
+    text-align: center;
+    padding: 4vh 3vw 2vh;
+  }
+  header h1 { font-size: clamp(28px, 5vw, 56px); font-weight: 800; letter-spacing: 1px; }
+  header p { color: #c9d8cf; margin-top: 6px; font-size: clamp(13px, 2vw, 20px); }
+
+  .container {
+    max-width: 720px;
+    margin: 2vh auto;
+    padding: 0 4vw;
+  }
+  .card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(212,175,90,0.4);
+    border-radius: 18px;
+    padding: 3vh 5vw;
+    margin-bottom: 3vh;
+  }
+  .field { margin-bottom: 2vh; }
+  .field label { display: block; font-size: 14px; color: #c9d8cf; margin-bottom: 6px; }
+  .field input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.25);
+    color: #fff;
+    font-family: inherit;
+    font-size: 16px;
+  }
+  .field input::placeholder { color: #9fb3a8; }
+  .btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #E8C45A 0%, #c79a2e 100%);
+    color: #06231b;
+    font-weight: 800;
+    font-size: 18px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .btn:hover { filter: brightness(1.05); }
+
+  .map-placeholder {
+    height: 30vh;
+    border-radius: 14px;
+    border: 1px dashed rgba(212,175,90,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #c9d8cf;
+    font-size: 15px;
+    text-align: center;
+    background: rgba(0,0,0,0.2);
+  }
+  .cities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 1vh;
+  }
+  .city {
+    background: rgba(212,175,90,0.12);
+    border: 1px solid rgba(212,175,90,0.35);
+    color: #E8C45A;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+  }
+  footer { text-align: center; color: #9fb3a8; padding: 3vh 3vw; font-size: 13px; opacity: 0.8; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>أُجَرَه</h1>
+    <p>تطبيق التوصيل داخل سوريا — من الانطلاق إلى الوجهة بأُجَرَه</p>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <div class="field">
+        <label>نقطة الانطلاق</label>
+        <input id="from" placeholder="مثال: ساحة الأمويين — دمشق">
+      </div>
+      <div class="field">
+        <label>الوجهة</label>
+        <input id="to" placeholder="مثال: قلعة حلب — حلب">
+      </div>
+      <button class="btn" onclick="requestRide()">طلب رحلة</button>
+    </div>
+
+    <div class="card">
+      <div class="map-placeholder" id="map">الخريطة ستُحمّل هنا (دمشق / حلب / حمص …)</div>
+    </div>
+
+    <div class="card">
+      <div class="cities">
+        <span class="city">دمشق</span>
+        <span class="city">حلب</span>
+        <span class="city">حمص</span>
+        <span class="city">حماه</span>
+        <span class="city">اللاذقية</span>
+        <span class="city">إدلب</span>
+        <span class="city">درعا</span>
+        <span class="city">دير الزور</span>
+        <span class="city">الرقة</span>
+        <span class="city">الحسكة</span>
+        <span class="city">القامشلي</span>
+        <span class="city">طرطوس</span>
+        <span class="city">السويداء</span>
+        <span class="city">القنيطرة</span>
+      </div>
+    </div>
+  </div>
+
+  <footer>نموذج أولي لمشروع «أُجَرَه» — سيتم تطويره لاحقاً.</footer>
+
+  <script>
+    function requestRide() {
+      var from = document.getElementById('from').value.trim();
+      var to = document.getElementById('to').value.trim();
+      if (!from || !to) {
+        alert('الرجاء إدخال نقطة الانطلاق والوجهة');
+        return;
+      }
+      document.getElementById('map').textContent = 'جاري حساب الرحلة من «' + from + '» إلى «' + to + '»…';
+    }
+  </script>
+</body>
+</html>
