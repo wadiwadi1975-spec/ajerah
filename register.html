@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أُجْرَه — انضمام السائقين</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Cairo', Tahoma, sans-serif;
+    background: linear-gradient(135deg, #021430 0%, #0B3A7A 50%, #374454 100%);
+    color: #E8C45A; min-height: 100vh;
+  }
+  header { text-align: center; padding: 4vh 3vw 1vh; }
+  header .logo { width: 90px; height: 90px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,.45)); margin-bottom: 6px; }
+  header h1 { font-size: clamp(24px, 5vw, 44px); font-weight: 800; }
+  header a.back { color: #c9d8cf; display: inline-block; margin-top: 8px; font-size: 14px; text-decoration: none; }
+
+  .container { max-width: 820px; margin: 2vh auto; padding: 0 4vw; }
+  .card {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(212,175,90,0.4);
+    border-radius: 18px; padding: 3vh 5vw; margin-bottom: 3vh;
+  }
+  .card h2 { font-size: 20px; margin-bottom: 1.5vh; border-bottom: 1px solid rgba(212,175,90,0.3); padding-bottom: 8px; }
+  .conditions li { color: #e7efe9; margin: 6px 18px; font-size: 15px; line-height: 1.6; }
+
+  .field { margin-bottom: 1.8vh; }
+  .field label { display: block; font-size: 14px; color: #c9d8cf; margin-bottom: 6px; }
+  .field input, .field select {
+    width: 100%; padding: 13px 15px; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.25); color: #fff; font-family: inherit; font-size: 16px;
+  }
+  .field input[type=file] { padding: 9px; color: #c9d8cf; }
+  .field select option { color: #000; }
+  .grid { display: flex; gap: 2vw; flex-wrap: wrap; }
+  .grid .field { flex: 1; min-width: 200px; }
+
+  .btn {
+    width: 100%; padding: 16px; border: none; border-radius: 12px;
+    background: linear-gradient(135deg, #E8C45A 0%, #c79a2e 100%);
+    color: #06231b; font-weight: 800; font-size: 18px; font-family: inherit; cursor: pointer; margin-top: 1vh;
+  }
+  .btn:hover { filter: brightness(1.05); }
+  .err { color: #ff8a8a; font-size: 13px; margin-top: 5px; }
+  footer { text-align: center; color: #9fb3a8; padding: 3vh; font-size: 13px; opacity: .8; }
+</style>
+</head>
+<body>
+  <header>
+    <img src="images/logo.png" alt="شعار أُجْرَه" class="logo">
+    <h1>انضمام السائقين</h1>
+    <a class="back" href="index.html">→ العودة للرئيسية</a>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2>شروط التسجيل — السائق</h2>
+      <ul class="conditions">
+        <li>العمر 21 سنة فأكثر.</li>
+        <li>رخصة قيادة سارية مضى عليها سنة على الأقل.</li>
+        <li>بطاقة شخصية/هوية سورية سارية.</li>
+        <li>سجل أمني نظيف (إفادة بعدم وجود سوابق).</li>
+        <li>صورة شخصية واضحة وحديثة.</li>
+        <li>اجتياز المقابلة/التقييم من إدارة التطبيق.</li>
+      </ul>
+      <h2 style="margin-top:2vh">شروط التسجيل — المركبة</h2>
+      <ul class="conditions">
+        <li>سنة الصنع لا تزيد عن 10 سنوات.</li>
+        <li>فحص فني دوري ساري.</li>
+        <li>تأمين إلزامي ساري.</li>
+        <li>لوحات سورية مسجّلة باسم السائق أو بتفويض رسمي.</li>
+        <li>صالحة لنقل الركاب (سلامة فرامل/إطارات/إضاءة، عدد مقاعد مناسب).</li>
+        <li>صور واضحة للمركبة من الأمام والخلف ورقم اللوحة.</li>
+      </ul>
+    </div>
+
+    <form class="card" id="regForm" onsubmit="return submitForm(event)">
+      <h2>بيانات السائق</h2>
+      <div class="grid">
+        <div class="field">
+          <label>الاسم الكامل</label>
+          <input id="d_name" placeholder="الاسم الثلاثي">
+          <div class="err" id="e_d_name"></div>
+        </div>
+        <div class="field">
+          <label>رقم الهوية / البطاقة الشخصية</label>
+          <input id="d_id" placeholder="أرقام فقط">
+          <div class="err" id="e_d_id"></div>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label>تاريخ الميلاد</label>
+          <input id="d_birth" type="date">
+          <div class="err" id="e_d_birth"></div>
+        </div>
+        <div class="field">
+          <label>رقم الهاتف (واتساب)</label>
+          <input id="d_phone" placeholder="09xxxxxxxx">
+          <div class="err" id="e_d_phone"></div>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label>المحافظة</label>
+          <select id="d_city">
+            <option value="">— اختر —</option>
+            <option>دمشق</option><option>ريف دمشق</option><option>درعا</option>
+            <option>حلب</option><option>حمص</option><option>حماه</option>
+            <option>اللاذقية</option><option>إدلب</option><option>طرطوس</option>
+            <option>السويداء</option><option>القنيطرة</option><option>دير الزور</option>
+            <option>الرقة</option><option>الحسكة</option><option>القامشلي</option>
+          </select>
+          <div class="err" id="e_d_city"></div>
+        </div>
+        <div class="field">
+          <label>رقم رخصة القيادة</label>
+          <input id="d_lic" placeholder="رقم الرخصة">
+          <div class="err" id="e_d_lic"></div>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label>تاريخ انتهاء الرخصة</label>
+          <input id="d_lic_exp" type="date">
+          <div class="err" id="e_d_lic_exp"></div>
+        </div>
+        <div class="field">
+          <label>صورة الرخصة + صورة شخصية</label>
+          <input id="d_files" type="file" multiple accept="image/*">
+          <div class="err" id="e_d_files"></div>
+        </div>
+      </div>
+
+      <h2 style="margin-top:3vh">بيانات المركبة</h2>
+      <div class="grid">
+        <div class="field">
+          <label>نوع المركبة</label>
+          <select id="v_type">
+            <option value="private">سيارة خاصة</option>
+            <option value="taxi">تاكسي</option>
+            <option value="bus">حافلة (نقل عام)</option>
+            <option value="van">فان</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>الماركة / الموديل</label>
+          <input id="v_model" placeholder="مثال: هيونداي أكسنت">
+          <div class="err" id="e_v_model"></div>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label>سنة الصنع</label>
+          <input id="v_year" type="number" placeholder="مثال: 2019">
+          <div class="err" id="e_v_year"></div>
+        </div>
+        <div class="field">
+          <label>رقم اللوحة</label>
+          <input id="v_plate" placeholder="مثال: 123456/دمشق">
+          <div class="err" id="e_v_plate"></div>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label>نوع الوقود</label>
+          <select id="v_fuel">
+            <option>بنزين</option><option>مازوت</option><option>كهرباء</option><option>هجين</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>عدد المقاعد</label>
+          <input id="v_seats" type="number" placeholder="مثال: 4">
+          <div class="err" id="e_v_seats"></div>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label>تاريخ انتهاء التأمين</label>
+          <input id="v_ins" type="date">
+          <div class="err" id="e_v_ins"></div>
+        </div>
+        <div class="field">
+          <label>تاريخ الفحص الفني</label>
+          <input id="v_insp" type="date">
+          <div class="err" id="e_v_insp"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>صور المركبة (أمامي، خلفي، اللوحة)</label>
+        <input id="v_files" type="file" multiple accept="image/*">
+        <div class="err" id="e_v_files"></div>
+      </div>
+
+      <button class="btn" type="submit">إرسال طلب التسجيل</button>
+    </form>
+  </div>
+
+  <footer>نموذج أولي لمشروع «أُجْرَه» — التسجيل تجريبي بدون قاعدة بيانات.</footer>
+
+  <script>
+    var MAX_AGE_LIMIT = 10;     // أقصى عمر للمركبة بالسنوات
+    var MIN_DRIVER_AGE = 21;    // الحد الأدنى لعمر السائق
+
+    function clearErrors() {
+      document.querySelectorAll('.err').forEach(function(e){ e.textContent=''; });
+    }
+    function setError(id, msg) { document.getElementById('e_' + id).textContent = msg; }
+
+    function yearsBetween(a, b) {
+      var diff = b - a;
+      return diff / (365.25 * 24 * 3600 * 1000);
+    }
+
+    function submitForm(e) {
+      e.preventDefault();
+      clearErrors();
+      var ok = true;
+      var today = new Date();
+
+      var name = document.getElementById('d_name').value.trim();
+      var idn  = document.getElementById('d_id').value.trim();
+      var birth= document.getElementById('d_birth').value;
+      var phone= document.getElementById('d_phone').value.trim();
+      var city = document.getElementById('d_city').value;
+      var lic  = document.getElementById('d_lic').value.trim();
+      var licexp = document.getElementById('d_lic_exp').value;
+      var dFiles = document.getElementById('d_files').files.length;
+
+      var model= document.getElementById('v_model').value.trim();
+      var year = parseInt(document.getElementById('v_year').value, 10);
+      var plate= document.getElementById('v_plate').value.trim();
+      var seats= parseInt(document.getElementById('v_seats').value, 10);
+      var vIns = document.getElementById('v_ins').value;
+      var vInsp= document.getElementById('v_insp').value;
+      var vFiles= document.getElementById('v_files').files.length;
+
+      if (!name) { setError('d_name','مطلوب'); ok=false; }
+      if (!/^\d{8,}$/.test(idn)) { setError('d_id','رقم هوية غير صالح'); ok=false; }
+      if (!birth) { setError('d_birth','مطلوب'); ok=false; }
+      else if (yearsBetween(new Date(birth), today) < MIN_DRIVER_AGE) { setError('d_birth','العمر يجب ألا يقل عن '+MIN_DRIVER_AGE+' سنة'); ok=false; }
+      if (!/^09\d{8}$/.test(phone)) { setError('d_phone','رقم هاتف غير صالح'); ok=false; }
+      if (!city) { setError('d_city','اختر المحافظة'); ok=false; }
+      if (!lic) { setError('d_lic','مطلوب'); ok=false; }
+      if (!licexp || new Date(licexp) <= today) { setError('d_lic_exp','يجب أن يكون تاريخ انتهاء الرخصة في المستقبل'); ok=false; }
+      if (dFiles < 1) { setError('d_files','أرفق صورة الرخصة وصورة شخصية'); ok=false; }
+
+      if (!model) { setError('v_model','مطلوب'); ok=false; }
+      if (!year || year < today.getFullYear() - MAX_AGE_LIMIT || year > today.getFullYear()) {
+        setError('v_year','سنة الصنع يجب ألا تزيد عن '+MAX_AGE_LIMIT+' سنوات'); ok=false;
+      }
+      if (!plate) { setError('v_plate','مطلوب'); ok=false; }
+      if (!seats || seats < 4) { setError('v_seats','عدد المقاعد لا يقل عن 4'); ok=false; }
+      if (!vIns || new Date(vIns) <= today) { setError('v_ins','تأمين ساري (تاريخ مستقبلي)'); ok=false; }
+      if (!vInsp || new Date(vInsp) <= today) { setError('v_insp','فحص فني ساري (تاريخ مستقبلي)'); ok=false; }
+      if (vFiles < 1) { setError('v_files','أرفق صور المركبة'); ok=false; }
+
+      if (!ok) return false;
+
+      var payload = {
+        driver: { name:name, id:idn, birth:birth, phone:phone, city:city, license:lic, licenseExpiry:licexp },
+        vehicle: { type:document.getElementById('v_type').value, model:model, year:year, plate:plate,
+                   fuel:document.getElementById('v_fuel').value, seats:seats, insuranceExpiry:vIns, inspectionDate:vInsp }
+      };
+      console.log('Driver registration payload:', payload);
+      alert('تم استلام طلب التسجيل (نموذج أولي).\nالبيانات مطابقة للشروط الأساسية.');
+      return false;
+    }
+  </script>
+</body>
+</html>
