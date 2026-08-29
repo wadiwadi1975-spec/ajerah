@@ -103,6 +103,13 @@
           <option value="van">فان</option>
         </select>
       </div>
+      <div class="field">
+        <label>العملة</label>
+        <select id="currency">
+          <option value="syp" selected>ل.س — الليرة السورية</option>
+          <option value="usd">$ — دولار أمريكي</option>
+        </select>
+      </div>
       <button class="btn" onclick="requestRide()">احسب الأجر</button>
     </div>
 
@@ -153,6 +160,10 @@
       van:     { name:"فان",        base:1000, perKm:800,  perMin:100, speed:75 }
     };
     var ROAD_FACTOR = 1.3; // معامل تحويل المسافة الخطية إلى مسافة طرقية تقديرية
+    var RATE = 13000; // سعر صرف الدولار مقابل الليرة السورية (توضيحي — يُعدّل حسب السوق)
+
+    function fmtSYP(n) { return Math.round(n).toLocaleString('ar-SY') + ' ل.س'; }
+    function fmtUSD(n) { return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
     var map = L.map('map').setView([34.0, 37.5], 7);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -188,16 +199,28 @@
         return;
       }
       var v = VEHICLES[document.getElementById('vehicle').value];
+      var cur = document.getElementById('currency').value;
       var lineDist = haversine(CITIES[from], CITIES[to]);
       var roadDist = lineDist * ROAD_FACTOR;
       var timeMin = roadDist / v.speed * 60;
-      var fare = Math.round(v.base + v.perKm * roadDist + v.perMin * timeMin);
+      var fareSYP = Math.round(v.base + v.perKm * roadDist + v.perMin * timeMin);
       drawRoute(from, to);
+
+      var main, sub;
+      if (cur === 'usd') {
+        main = fmtUSD(fareSYP / RATE);
+        sub = '≈ ' + fmtSYP(fareSYP);
+      } else {
+        main = fmtSYP(fareSYP);
+        sub = '≈ ' + fmtUSD(fareSYP / RATE);
+      }
+
       document.getElementById('info').innerHTML =
         'الخط: <b>' + from + ' ←→ ' + to + '</b> — <b>' + v.name + '</b><br>' +
         'المسافة التقديرية على الطريق: <b>' + roadDist.toFixed(1) + ' كم</b><br>' +
         'الوقت التقديري: <b>' + Math.round(timeMin) + ' دقيقة</b><br>' +
-        'الأجر المتوقع: <b>' + fare.toLocaleString('ar-SY') + ' ل.س</b>';
+        'الأجر المتوقع: <b>' + main + '</b><br>' +
+        '<span style="font-size:14px;opacity:.8">' + sub + ' &nbsp;|&nbsp; 1$ = ' + RATE.toLocaleString('ar-SY') + ' ل.س</span>';
     }
 
     // رسم الخط الافتراضي درعا ↔ دمشق عند التحميل
