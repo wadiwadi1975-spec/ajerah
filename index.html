@@ -6,6 +6,8 @@
 <title>أُجَرَه — تطبيق التوصيل داخل سوريا</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -14,18 +16,11 @@
     color: #E8C45A;
     min-height: 100vh;
   }
-  header {
-    text-align: center;
-    padding: 4vh 3vw 2vh;
-  }
+  header { text-align: center; padding: 4vh 3vw 2vh; }
   header h1 { font-size: clamp(28px, 5vw, 56px); font-weight: 800; letter-spacing: 1px; }
   header p { color: #c9d8cf; margin-top: 6px; font-size: clamp(13px, 2vw, 20px); }
 
-  .container {
-    max-width: 720px;
-    margin: 2vh auto;
-    padding: 0 4vw;
-  }
+  .container { max-width: 920px; margin: 2vh auto; padding: 0 4vw; }
   .card {
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(212,175,90,0.4);
@@ -33,59 +28,38 @@
     padding: 3vh 5vw;
     margin-bottom: 3vh;
   }
-  .field { margin-bottom: 2vh; }
+  .row { display: flex; gap: 2vw; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 200px; margin-bottom: 2vh; }
   .field label { display: block; font-size: 14px; color: #c9d8cf; margin-bottom: 6px; }
   .field input {
-    width: 100%;
-    padding: 14px 16px;
-    border-radius: 12px;
+    width: 100%; padding: 14px 16px; border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.15);
-    background: rgba(0,0,0,0.25);
-    color: #fff;
-    font-family: inherit;
-    font-size: 16px;
+    background: rgba(0,0,0,0.25); color: #fff;
+    font-family: inherit; font-size: 16px;
   }
   .field input::placeholder { color: #9fb3a8; }
   .btn {
-    width: 100%;
-    padding: 16px;
-    border: none;
-    border-radius: 12px;
+    width: 100%; padding: 16px; border: none; border-radius: 12px;
     background: linear-gradient(135deg, #E8C45A 0%, #c79a2e 100%);
-    color: #06231b;
-    font-weight: 800;
-    font-size: 18px;
-    font-family: inherit;
-    cursor: pointer;
+    color: #06231b; font-weight: 800; font-size: 18px;
+    font-family: inherit; cursor: pointer;
   }
   .btn:hover { filter: brightness(1.05); }
 
-  .map-placeholder {
-    height: 30vh;
-    border-radius: 14px;
-    border: 1px dashed rgba(212,175,90,0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #c9d8cf;
-    font-size: 15px;
-    text-align: center;
-    background: rgba(0,0,0,0.2);
+  .map-box {
+    height: 42vh; border-radius: 14px; overflow: hidden;
+    border: 1px solid rgba(212,175,90,0.4); background: rgba(0,0,0,0.2);
   }
-  .cities {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 1vh;
+  .info {
+    margin-top: 1.5vh; text-align: center; font-size: clamp(14px, 2vw, 20px);
+    color: #fff; line-height: 1.8;
   }
+  .info b { color: #E8C45A; }
+
+  .cities { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 1vh; }
   .city {
-    background: rgba(212,175,90,0.12);
-    border: 1px solid rgba(212,175,90,0.35);
-    color: #E8C45A;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 14px;
+    background: rgba(212,175,90,0.12); border: 1px solid rgba(212,175,90,0.35);
+    color: #E8C45A; padding: 6px 12px; border-radius: 20px; font-size: 14px;
   }
   footer { text-align: center; color: #9fb3a8; padding: 3vh 3vw; font-size: 13px; opacity: 0.8; }
 </style>
@@ -98,37 +72,33 @@
 
   <div class="container">
     <div class="card">
-      <div class="field">
-        <label>نقطة الانطلاق</label>
-        <input id="from" placeholder="مثال: درعا" value="درعا">
-      </div>
-      <div class="field">
-        <label>الوجهة</label>
-        <input id="to" placeholder="مثال: دمشق" value="دمشق">
+      <div class="row">
+        <div class="field">
+          <label>نقطة الانطلاق</label>
+          <input id="from" placeholder="مثال: درعا" value="درعا">
+        </div>
+        <div class="field">
+          <label>الوجهة</label>
+          <input id="to" placeholder="مثال: دمشق" value="دمشق">
+        </div>
       </div>
       <button class="btn" onclick="requestRide()">طلب رحلة</button>
     </div>
 
     <div class="card">
-      <div class="map-placeholder" id="map">الخريطة ستُحمّل هنا (دمشق / حلب / حمص …)</div>
+      <div id="map" class="map-box"></div>
+      <div id="info" class="info">الخريطة تُحمّل…</div>
     </div>
 
     <div class="card">
       <div class="cities">
-        <span class="city">دمشق</span>
-        <span class="city">حلب</span>
-        <span class="city">حمص</span>
-        <span class="city">حماه</span>
-        <span class="city">اللاذقية</span>
-        <span class="city">إدلب</span>
-        <span class="city">درعا</span>
-        <span class="city">دير الزور</span>
-        <span class="city">الرقة</span>
-        <span class="city">الحسكة</span>
-        <span class="city">القامشلي</span>
-        <span class="city">طرطوس</span>
-        <span class="city">السويداء</span>
-        <span class="city">القنيطرة</span>
+        <span class="city">دمشق</span><span class="city">درعا</span>
+        <span class="city">حلب</span><span class="city">حمص</span>
+        <span class="city">حماه</span><span class="city">اللاذقية</span>
+        <span class="city">إدلب</span><span class="city">دير الزور</span>
+        <span class="city">الرقة</span><span class="city">الحسكة</span>
+        <span class="city">القامشلي</span><span class="city">طرطوس</span>
+        <span class="city">السويداء</span><span class="city">القنيطرة</span>
       </div>
     </div>
   </div>
@@ -136,7 +106,7 @@
   <footer>نموذج أولي لمشروع «أُجَرَه» — سيتم تطويره لاحقاً.</footer>
 
   <script>
-    // إحداثيات تقريبية لبعض المدن السورية (خط العرض، خط الطول)
+    // إحداثيات تقريبية لبعض المدن السورية
     var CITIES = {
       "دمشق":  {lat:33.5138, lng:36.2765},
       "درعا":  {lat:32.6192, lng:36.1021},
@@ -145,41 +115,60 @@
       "حماه":  {lat:35.1318, lng:36.7570},
       "اللاذقية":{lat:35.5315, lng:35.8130},
       "إدلب":  {lat:35.9300, lng:36.3600},
-      "حماة":  {lat:35.1318, lng:36.7570}
+      "دير الزور":{lat:35.3434, lng:40.1410},
+      "الرقة": {lat:35.9500, lng:39.0200},
+      "الحسكة":{lat:36.5000, lng:40.7500},
+      "القامشلي":{lat:37.0600, lng:42.0200},
+      "طرطوس":{lat:34.8800, lng:35.8800},
+      "السويداء":{lat:32.7100, lng:36.5600},
+      "القنيطرة":{lat:33.1200, lng:35.8300}
     };
-    // معاملات الأجر (أرقام توضيحية قابلة للتعديل)
-    var BASE_FARE = 1500;   // أجر البداية
-    var PER_KM = 1200;      // أجر الكيلومتر
+    var BASE_FARE = 1500, PER_KM = 1200; // أرقام توضيحية
+
+    var map = L.map('map').setView([34.0, 37.5], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18, attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    var routeLayer = L.layerGroup().addTo(map);
 
     function haversine(a, b) {
       var R = 6371;
-      var dLat = (b.lat - a.lat) * Math.PI / 180;
-      var dLon = (b.lng - a.lng) * Math.PI / 180;
-      var la1 = a.lat * Math.PI / 180, la2 = b.lat * Math.PI / 180;
-      var h = Math.sin(dLat/2)*Math.sin(dLat/2) +
-              Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)*Math.sin(dLon/2);
-      return 2 * R * Math.asin(Math.sqrt(h));
+      var dLat = (b.lat - a.lat) * Math.PI/180;
+      var dLon = (b.lng - a.lng) * Math.PI/180;
+      var la1 = a.lat*Math.PI/180, la2 = b.lat*Math.PI/180;
+      var h = Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;
+      return 2*R*Math.asin(Math.sqrt(h));
+    }
+
+    function drawRoute(from, to) {
+      routeLayer.clearLayers();
+      var A = CITIES[from], B = CITIES[to];
+      L.marker([A.lat, A.lng]).addTo(routeLayer).bindPopup('الانطلاق: ' + from);
+      L.marker([B.lat, B.lng]).addTo(routeLayer).bindPopup('الوجهة: ' + to);
+      L.polyline([[A.lat,A.lng],[B.lat,B.lng]], {color:'#E8C45A', weight:4}).addTo(routeLayer);
+      map.fitBounds([[A.lat,A.lng],[B.lat,B.lng]], {padding:[40,40]});
     }
 
     function requestRide() {
       var from = document.getElementById('from').value.trim();
       var to = document.getElementById('to').value.trim();
-      if (!from || !to) {
-        alert('الرجاء إدخال نقطة الانطلاق والوجهة');
-        return;
-      }
+      if (!from || !to) { alert('الرجاء إدخال نقطة الانطلاق والوجهة'); return; }
       if (!CITIES[from] || !CITIES[to]) {
-        document.getElementById('map').textContent =
-          'المدينة غير موجودة في القائمة بعد. المدن المتاحة: ' + Object.keys(CITIES).join('، ');
+        document.getElementById('info').innerHTML = 'المدينة غير موجودة بعد. المتاح: ' + Object.keys(CITIES).join('، ');
         return;
       }
       var dist = haversine(CITIES[from], CITIES[to]);
       var fare = Math.round(BASE_FARE + dist * PER_KM);
-      document.getElementById('map').innerHTML =
+      drawRoute(from, to);
+      document.getElementById('info').innerHTML =
         'الخط: <b>' + from + ' ←→ ' + to + '</b><br>' +
         'المسافة التقريبية: <b>' + dist.toFixed(1) + ' كم</b><br>' +
         'الأجر المتوقع (توضيحي): <b>' + fare.toLocaleString('ar-SY') + ' ل.س</b>';
     }
+
+    // رسم الخط الافتراضي درعا ↔ دمشق عند التحميل
+    requestRide();
   </script>
 </body>
 </html>
