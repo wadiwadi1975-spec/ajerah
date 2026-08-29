@@ -100,11 +100,11 @@
     <div class="card">
       <div class="field">
         <label>نقطة الانطلاق</label>
-        <input id="from" placeholder="مثال: ساحة الأمويين — دمشق">
+        <input id="from" placeholder="مثال: درعا" value="درعا">
       </div>
       <div class="field">
         <label>الوجهة</label>
-        <input id="to" placeholder="مثال: قلعة حلب — حلب">
+        <input id="to" placeholder="مثال: دمشق" value="دمشق">
       </div>
       <button class="btn" onclick="requestRide()">طلب رحلة</button>
     </div>
@@ -136,6 +136,31 @@
   <footer>نموذج أولي لمشروع «أُجَرَه» — سيتم تطويره لاحقاً.</footer>
 
   <script>
+    // إحداثيات تقريبية لبعض المدن السورية (خط العرض، خط الطول)
+    var CITIES = {
+      "دمشق":  {lat:33.5138, lng:36.2765},
+      "درعا":  {lat:32.6192, lng:36.1021},
+      "حلب":   {lat:36.2021, lng:37.1343},
+      "حمص":   {lat:34.7324, lng:36.7130},
+      "حماه":  {lat:35.1318, lng:36.7570},
+      "اللاذقية":{lat:35.5315, lng:35.8130},
+      "إدلب":  {lat:35.9300, lng:36.3600},
+      "حماة":  {lat:35.1318, lng:36.7570}
+    };
+    // معاملات الأجر (أرقام توضيحية قابلة للتعديل)
+    var BASE_FARE = 1500;   // أجر البداية
+    var PER_KM = 1200;      // أجر الكيلومتر
+
+    function haversine(a, b) {
+      var R = 6371;
+      var dLat = (b.lat - a.lat) * Math.PI / 180;
+      var dLon = (b.lng - a.lng) * Math.PI / 180;
+      var la1 = a.lat * Math.PI / 180, la2 = b.lat * Math.PI / 180;
+      var h = Math.sin(dLat/2)*Math.sin(dLat/2) +
+              Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)*Math.sin(dLon/2);
+      return 2 * R * Math.asin(Math.sqrt(h));
+    }
+
     function requestRide() {
       var from = document.getElementById('from').value.trim();
       var to = document.getElementById('to').value.trim();
@@ -143,7 +168,17 @@
         alert('الرجاء إدخال نقطة الانطلاق والوجهة');
         return;
       }
-      document.getElementById('map').textContent = 'جاري حساب الرحلة من «' + from + '» إلى «' + to + '»…';
+      if (!CITIES[from] || !CITIES[to]) {
+        document.getElementById('map').textContent =
+          'المدينة غير موجودة في القائمة بعد. المدن المتاحة: ' + Object.keys(CITIES).join('، ');
+        return;
+      }
+      var dist = haversine(CITIES[from], CITIES[to]);
+      var fare = Math.round(BASE_FARE + dist * PER_KM);
+      document.getElementById('map').innerHTML =
+        'الخط: <b>' + from + ' ←→ ' + to + '</b><br>' +
+        'المسافة التقريبية: <b>' + dist.toFixed(1) + ' كم</b><br>' +
+        'الأجر المتوقع (توضيحي): <b>' + fare.toLocaleString('ar-SY') + ' ل.س</b>';
     }
   </script>
 </body>
