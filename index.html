@@ -95,6 +95,8 @@
         <div class="field">
           <label>نقطة الانطلاق (مكانك الحالي)</label>
           <input id="from" placeholder="مثال: درعا" value="درعا">
+          <button type="button" onclick="useMyLocation()" style="margin-top:8px; width:100%; padding:9px; border-radius:10px; border:1px solid rgba(212,175,90,0.4); background:rgba(212,175,90,0.12); color:#E8C45A; font-family:inherit; cursor:pointer; font-size:13px;">📍 استخدم موقعي الحالي (GPS) — أو انقر على الخريطة</button>
+          <div id="posInfo" style="font-size:12px;opacity:.75;margin-top:6px"></div>
         </div>
         <div class="field">
           <label>الوجهة</label>
@@ -207,6 +209,25 @@
     }).addTo(map);
     var routeLayer = L.layerGroup().addTo(map);
 
+    var userPos = null;
+    var pickupMarker = null;
+    function setPickup(latlng, label){
+      userPos = {lat: latlng.lat, lng: latlng.lng};
+      if (pickupMarker) map.removeLayer(pickupMarker);
+      pickupMarker = L.marker([latlng.lat, latlng.lng], {draggable:true}).addTo(map).bindPopup(label || 'نقطة انطلاقك').openPopup();
+      pickupMarker.on('dragend', function(e){ var p=e.target.getLatLng(); userPos={lat:p.lat,lng:p.lng}; document.getElementById('posInfo').textContent='تم تحديث موقعك: '+p.lat.toFixed(4)+', '+p.lng.toFixed(4); });
+      document.getElementById('posInfo').textContent = (label||'موقع محدد') + ': ' + latlng.lat.toFixed(4)+', '+latlng.lng.toFixed(4) + ' — يبحث ضمن '+RADIUS_KM+' كم حولك';
+    }
+    function useMyLocation(){
+      if (!navigator.geolocation) { alert('المتصفح لا يدعم تحديد الموقع'); return; }
+      document.getElementById('posInfo').textContent='جاري تحديد موقعك...';
+      navigator.geolocation.getCurrentPosition(function(pos){
+        setPickup({lat:pos.coords.latitude, lng:pos.coords.longitude}, 'موقعك الحالي (GPS)');
+        map.setView([pos.coords.latitude, pos.coords.longitude], 13);
+      }, function(err){ alert('فشل تحديد الموقع: '+err.message); document.getElementById('posInfo').textContent=''; });
+    }
+    map.on('click', function(e){ setPickup(e.latlng, 'نقطة انطلاقك (نقر على الخريطة)'); });
+
     function haversine(a, b) {
       var R = 6371;
       var dLat = (b.lat - a.lat) * Math.PI/180;
@@ -216,42 +237,44 @@
       return 2*R*Math.asin(Math.sqrt(h));
     }
 
-    function drawRoute(from, to, drivers) {
+    function drawRoute(originCoords, destCoords, drivers, fromLabel, toLabel) {
       routeLayer.clearLayers();
-      var A = CITIES[from], B = CITIES[to];
-      L.marker([A.lat, A.lng]).addTo(routeLayer).bindPopup('نقطة الانطلاق: ' + from);
-      L.marker([B.lat, B.lng]).addTo(routeLayer).bindPopup('الوجهة: ' + to);
-      L.polyline([[A.lat,A.lng],[B.lat,B.lng]], {color:'#E8C45A', weight:4}).addTo(routeLayer);
-      var bounds = [[A.lat,A.lng],[B.lat,B.lng]];
+      L.marker([originCoords.lat, originCoords.lng]).addTo(routeLayer).bindPopup('نقطة انطلاقك: ' + fromLabel);
+      if (pickupMarker) { /* يبقى ظاهراً */ }
+      L.marker([destCoords.lat, destCoords.lng]).addTo(routeLayer).bindPopup('الوجهة: ' + toLabel);
+      L.polyline([[originCoords.lat,originCoords.lng],[destCoords.lat,destCoords.lng]], {color:'#E8C45A', weight:4}).addTo(routeLayer);
+      var bounds = [[originCoords.lat,originCoords.lng],[destCoords.lat,destCoords.lng]];
       if (drivers && drivers.length) {
         for (var i=0;i<drivers.length;i++){
           var d = drivers[i];
           var dIcon = L.divIcon({ html: d.type==='bus' ? '🚌' : (d.type==='van' ? '🚐' : '🚕'), className:'', iconSize:[24,24] });
           L.marker([d.lat, d.lng], {icon:dIcon}).addTo(routeLayer).bindPopup(d.name + ' (' + VEHICLES[d.type].name + ')');
-          L.polyline([[d.lat, d.lng],[A.lat, A.lng]], {color:'#7ec8ff', weight:2, dashArray:'6 6', opacity:0.6}).addTo(routeLayer);
+          L.polyline([[d.lat, d.lng],[originCoords.lat, originCoords.lng]], {color:'#7ec8ff', weight:2, dashArray:'6 6', opacity:0.6}).addTo(routeLayer);
           bounds.push([d.lat, d.lng]);
         }
       }
       map.fitBounds(bounds, {padding:[40,40]});
     }
 
+    function findNearbyCars(originCoords) {
+      var res=[];
+      for (var i=0;i<DRIVERS.length;i++){
+        var d=DRIVERS[i];
+        if (!d.available) continue;
+        var dist=haversine(originCoords,{lat:d.lat,lng:d.lng});
+        if (dist > RADIUS_KM) continue;
+        var copy=Object.assign({},d);
+        copy._dist=dist;
+        res.push(copy);
+      }
+      res.sort(function(a,b){return a._dist-b._dist;});
+      return res;
+    }
     function findNearestPerType(originCoords, types) {
-      var res = [];
+      var all = findNearbyCars(originCoords);
+      var res=[];
       for (var t=0;t<types.length;t++){
-        var type = types[t];
-        var best = null, bestDist = Infinity;
-        for (var i=0;i<DRIVERS.length;i++){
-          var d = DRIVERS[i];
-          if (!d.available || d.type !== type) continue;
-          var dist = haversine(originCoords, {lat:d.lat, lng:d.lng});
-          if (dist > RADIUS_KM) continue; // ضمن 1 كم فقط
-          if (dist < bestDist) { bestDist = dist; best = d; }
-        }
-        if (best) {
-          var copy = Object.assign({}, best);
-          copy._dist = bestDist;
-          res.push(copy);
-        }
+        for (var i=0;i<all.length;i++) if (all[i].type===types[t]) { res.push(all[i]); break; }
       }
       return res;
     }
@@ -261,27 +284,32 @@
       var to = document.getElementById('to').value.trim();
       var cur = document.getElementById('currency').value;
       if (!from || !to) { alert('الرجاء إدخال نقطة الانطلاق والوجهة'); return; }
-      if (!CITIES[from] || !CITIES[to]) {
-        document.getElementById('info').innerHTML = 'المكان غير موجود بعد. المتاح: ' + Object.keys(CITIES).join('، ');
+      if (!CITIES[to]) {
+        document.getElementById('info').innerHTML = 'الوجهة غير موجودة. المتاح: ' + Object.keys(CITIES).join('، ');
         return;
       }
-      var lineDist = haversine(CITIES[from], CITIES[to]);
+      var originCoords, fromLabel;
+      if (userPos) {
+        originCoords = userPos;
+        fromLabel = from + ' (موقعك الدقيق)';
+      } else if (CITIES[from]) {
+        originCoords = CITIES[from];
+        fromLabel = from + ' (مركز المدينة)';
+      } else {
+        document.getElementById('info').innerHTML = 'نقطة الانطلاق غير موجودة. استخدم موقعك الدقيق عبر الزر أو النقر على الخريطة، أو اختر من: ' + Object.keys(CITIES).join('، ');
+        return;
+      }
+      var destCoords = CITIES[to];
+      var lineDist = haversine(originCoords, destCoords);
       var roadDist = lineDist * ROAD_FACTOR;
 
-      // اعرض على الأقل ثلاثة خيارات ضمن 1 كم: تاكسي + فان + باص
-      var wantedTypes = ['taxi','van','bus'];
-      var options = findNearestPerType(CITIES[from], wantedTypes);
-      // إن لم يكتمل العدد ضمن 1 كم، جرّب السيارة الخاصة كخيار إضافي ضمن نفس النطاق
-      if (options.length < 3) {
-        var extra = findNearestPerType(CITIES[from], ['private']);
-        for (var k=0;k<extra.length;k++) if (options.length < 3) options.push(extra[k]);
-      }
+      // السيارات حول طالب الأُجرة نفسه (ضمن 1 كم)، مرتبة من الأقرب للأبعد مع نوع كل سيارة
+      var options = findNearbyCars(originCoords);
 
-      drawRoute(from, to, options);
+      drawRoute(originCoords, destCoords, options, fromLabel, to);
 
-      // ملخص المسافة (مشترك)
       document.getElementById('info').innerHTML =
-        'الخط: <b>' + from + ' ←→ ' + to + '</b><br>' +
+        'الخط: <b>' + fromLabel + ' ←→ ' + to + '</b><br>' +
         'المسافة التقديرية على الطريق: <b>' + roadDist.toFixed(1) + ' كم</b>';
 
       var card = document.getElementById('driverCard');
@@ -289,11 +317,11 @@
       card.classList.add('active');
 
       if (!options.length) {
-        box.innerHTML = 'لا توجد سيارة ضمن <b>' + RADIUS_KM + ' كم</b> حول <b>' + from + '</b> حالياً. جرّب توسيع النطاق أو نوعاً آخر.';
+        box.innerHTML = 'لا توجد سيارة ضمن <b>' + RADIUS_KM + ' كم</b> حول موقعك حالياً. جرّب تحديد نقطة أخرى على الخريطة.';
         return;
       }
 
-      var html = '<div style="font-size:13px;opacity:.8;margin-bottom:8px">السيارات ضمن <b>' + RADIUS_KM + ' كم</b> حول <b>' + from + '</b> — اختر النوع المناسب (الأجرة ووقت الوصول محسوبان لـ ' + to + ')</div>';
+      var html = '<div style="font-size:13px;opacity:.8;margin-bottom:8px">السيارات ضمن <b>' + RADIUS_KM + ' كم</b> حول <b>موقعك</b> — مرتبة من الأقرب للأبعد (الأجرة لـ ' + to + ')</div>';
       for (var i=0;i<options.length;i++){
         var d = options[i];
         var v = VEHICLES[d.type];
@@ -303,7 +331,7 @@
         if (cur === 'usd') { main = fmtUSD(fareSYP / RATE); sub = '≈ ' + fmtSYP(fareSYP); }
         else { main = fmtSYP(fareSYP); sub = '≈ ' + fmtUSD(fareSYP / RATE); }
         html += '<div class="driver-opt">' +
-          '<div class="opt-head"><span class="badge">' + v.name + '</span><span style="font-size:13px;opacity:.85">يبعد ' + d._dist.toFixed(1) + ' كم</span></div>' +
+          '<div class="opt-head"><span class="badge">' + v.name + '</span><span style="font-size:13px;opacity:.85">يبعد ' + d._dist.toFixed(2) + ' كم</span></div>' +
           '<div style="margin:6px 0">' + d.name + ' — ' + d.model + ' — <span style="opacity:.85">' + d.plate + '</span></div>' +
           '<div>الأجر: <b>' + main + '</b> <span style="font-size:13px;opacity:.8">(' + sub + ')</span> — ' + Math.round(timeMin) + ' دقيقة</div>' +
           '<div style="margin-top:6px">رقم السائق: <a class="phone" href="tel:' + d.phone + '">' + d.phone + '</a></div>' +
