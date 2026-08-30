@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أُجْرَه — التسجيل</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Cairo',Tahoma,sans-serif;background:#000;color:#E8C45A;min-height:100vh}
+  header{text-align:center;padding:4vh 3vw 1vh}
+  header .logo{width:90px;height:90px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45));margin-bottom:6px}
+  header h1{font-size:clamp(24px,5vw,44px);font-weight:800}
+  header a.back{color:#c9d8cf;display:inline-block;margin-top:8px;font-size:14px;text-decoration:none}
+  .container{max-width:720px;margin:2vh auto;padding:0 4vw}
+  .card{background:rgba(255,255,255,0.06);border:1px solid rgba(212,175,90,0.4);border-radius:18px;padding:3vh 5vw;margin-bottom:3vh}
+  .tabs{display:flex;gap:10px;margin-bottom:2vh}
+  .tab{flex:1;padding:12px;border-radius:12px;border:1px solid rgba(212,175,90,0.4);background:rgba(255,255,255,0.06);color:#E8C45A;font-family:inherit;font-weight:700;cursor:pointer}
+  .tab.active{background:linear-gradient(135deg,#E8C45A 0%,#c79a2e 100%);color:#000}
+  .field{margin-bottom:1.6vh}
+  .field label{display:block;font-size:14px;color:#c9d8cf;margin-bottom:6px}
+  .field input,.field select{width:100%;padding:13px 15px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.25);color:#fff;font-family:inherit;font-size:16px}
+  .field select option{color:#000}
+  .grid{display:flex;gap:2vw;flex-wrap:wrap}
+  .grid .field{flex:1;min-width:180px}
+  .btn{width:100%;padding:15px;border:none;border-radius:12px;background:linear-gradient(135deg,#E8C45A 0%,#c79a2e 100%);color:#06231b;font-weight:800;font-size:17px;font-family:inherit;cursor:pointer;margin-top:1vh}
+  .btn:hover{filter:brightness(1.05)}
+  .err{color:#ff8a8a;font-size:13px;margin-top:5px;min-height:18px}
+  .msg{color:#7ec8ff;font-size:14px;text-align:center;margin-top:10px;min-height:18px}
+  .hidden{display:none}
+  footer{text-align:center;color:#9fb3a8;padding:3vh;font-size:13px;opacity:.8}
+</style>
+</head>
+<body>
+<header>
+  <img src="images/logo.png" alt="شعار أُجْرَه" class="logo">
+  <h1>التسجيل في أُجْرَه</h1>
+  <a class="back" href="index.html">→ العودة للرئيسية</a>
+</header>
+<div class="container">
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" id="tabReg" onclick="switchTab('reg')">حساب جديد</button>
+      <button class="tab" id="tabLogin" onclick="switchTab('login')">تسجيل دخول</button>
+    </div>
+
+    <!-- تسجيل جديد -->
+    <form id="formReg" onsubmit="return doRegister(event)">
+      <div class="field">
+        <label>الاسم الكامل</label>
+        <input id="r_name" placeholder="الاسم الثلاثي">
+        <div class="err" id="e_r_name"></div>
+      </div>
+      <div class="field">
+        <label>رقم الهاتف (09xxxxxxxx) — سيكون اسم المستخدم</label>
+        <input id="r_phone" placeholder="09xxxxxxxx">
+        <div class="err" id="e_r_phone"></div>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label>كلمة المرور (6 أحرف على الأقل)</label>
+          <input id="r_pass" type="password" placeholder="••••••">
+          <div class="err" id="e_r_pass"></div>
+        </div>
+        <div class="field">
+          <label>تأكيد كلمة المرور</label>
+          <input id="r_pass2" type="password" placeholder="••••••">
+          <div class="err" id="e_r_pass2"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>الدور</label>
+        <select id="r_role" onchange="toggleDriverFields()">
+          <option value="passenger">راكب</option>
+          <option value="driver">سائق</option>
+        </select>
+      </div>
+      <div id="driverExtra" class="hidden">
+        <div style="font-size:14px;color:#E8C45A;margin:1vh 0">بيانات المركبة (مطلوبة للسائق)</div>
+        <div class="grid">
+          <div class="field">
+            <label>نوع المركبة</label>
+            <select id="r_vtype">
+              <option value="taxi">تاكسي</option>
+              <option value="private">سيارة خاصة</option>
+              <option value="van">فان</option>
+              <option value="bus">باص</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>الموديل</label>
+            <input id="r_vmodel" placeholder="مثال: كيا ريو 2021">
+            <div class="err" id="e_r_vmodel"></div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="field">
+            <label>سنة الصنع</label>
+            <input id="r_vyear" type="number" placeholder="2019">
+            <div class="err" id="e_r_vyear"></div>
+          </div>
+          <div class="field">
+            <label>رقم اللوحة</label>
+            <input id="r_vplate" placeholder="123456/دمشق">
+            <div class="err" id="e_r_vplate"></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn" type="submit">إنشاء الحساب</button>
+      <div class="msg" id="msgReg"></div>
+    </form>
+
+    <!-- تسجيل دخول -->
+    <form id="formLogin" class="hidden" onsubmit="return doLogin(event)">
+      <div class="field">
+        <label>رقم الهاتف</label>
+        <input id="l_phone" placeholder="09xxxxxxxx">
+        <div class="err" id="e_l_phone"></div>
+      </div>
+      <div class="field">
+        <label>كلمة المرور</label>
+        <input id="l_pass" type="password" placeholder="••••••">
+        <div class="err" id="e_l_pass"></div>
+      </div>
+      <button class="btn" type="submit">دخول</button>
+      <div class="msg" id="msgLogin"></div>
+    </form>
+  </div>
+  <div class="card" style="text-align:center;font-size:13px;color:#c9d8cf">آلية التسجيل تجريبية: يُحفظ الحساب في <b>localStorage</b> على جهازك (بدون خادم). لاحقاً يُربط بـ API وقاعدة بيانات مع تحقق OTP عبر SMS.</div>
+</div>
+<footer>نموذج أولي لمشروع «أُجْرَه»</footer>
+<script>
+  function switchTab(which){
+    document.getElementById('tabReg').classList.toggle('active', which==='reg');
+    document.getElementById('tabLogin').classList.toggle('active', which==='login');
+    document.getElementById('formReg').classList.toggle('hidden', which!=='reg');
+    document.getElementById('formLogin').classList.toggle('hidden', which!=='login');
+  }
+  function toggleDriverFields(){
+    var role=document.getElementById('r_role').value;
+    document.getElementById('driverExtra').classList.toggle('hidden', role!=='driver');
+  }
+  function getUsers(){ try{return JSON.parse(localStorage.getItem('ajrah_users')||'[]')}catch(e){return []} }
+  function saveUsers(u){ localStorage.setItem('ajrah_users', JSON.stringify(u)) }
+  function setCurrent(u){ localStorage.setItem('ajrah_current', JSON.stringify(u)) }
+  function clearErrs(){ document.querySelectorAll('.err').forEach(function(e){e.textContent=''}); document.getElementById('msgReg').textContent=''; document.getElementById('msgLogin').textContent=''; }
+  function doRegister(e){
+    e.preventDefault(); clearErrs(); var ok=true;
+    var name=document.getElementById('r_name').value.trim();
+    var phone=document.getElementById('r_phone').value.trim();
+    var pass=document.getElementById('r_pass').value;
+    var pass2=document.getElementById('r_pass2').value;
+    var role=document.getElementById('r_role').value;
+    if (!name) {document.getElementById('e_r_name').textContent='مطلوب'; ok=false}
+    if (!/^09\d{8}$/.test(phone)) {document.getElementById('e_r_phone').textContent='رقم سوري 10 أرقام يبدأ بـ 09'; ok=false}
+    if (pass.length<6) {document.getElementById('e_r_pass').textContent='6 أحرف على الأقل'; ok=false}
+    if (pass!==pass2) {document.getElementById('e_r_pass2').textContent='غير مطابق'; ok=false}
+    if (role==='driver'){
+      var m=document.getElementById('r_vmodel').value.trim();
+      var y=parseInt(document.getElementById('r_vyear').value,10);
+      var p=document.getElementById('r_vplate').value.trim();
+      var cy=new Date().getFullYear();
+      if (!m){document.getElementById('e_r_vmodel').textContent='مطلوب'; ok=false}
+      if (!y || y<cy-10 || y>cy){document.getElementById('e_r_vyear').textContent='سنة غير مقبولة (آخر 10 سنوات)'; ok=false}
+      if (!p){document.getElementById('e_r_vplate').textContent='مطلوب'; ok=false}
+    }
+    if (!ok) return false;
+    var users=getUsers();
+    if (users.some(function(u){return u.phone===phone})) {document.getElementById('e_r_phone').textContent='الرقم مسجل مسبقاً'; return false}
+    var user={id:Date.now(), name:name, phone:phone, pass:pass, role:role, createdAt:new Date().toISOString()};
+    if (role==='driver'){
+      user.vehicle={type:document.getElementById('r_vtype').value, model:document.getElementById('r_vmodel').value.trim(), year:parseInt(document.getElementById('r_vyear').value,10), plate:document.getElementById('r_vplate').value.trim()};
+    }
+    users.push(user); saveUsers(users); setCurrent(user);
+    document.getElementById('msgReg').textContent='تم إنشاء الحساب — مرحباً '+name+' ('+(role==='driver'?'سائق':'راكب')+'). سيتم تحويلك للرئيسية...';
+    setTimeout(function(){location.href='index.html'}, 900);
+    return false;
+  }
+  function doLogin(e){
+    e.preventDefault(); clearErrs();
+    var phone=document.getElementById('l_phone').value.trim();
+    var pass=document.getElementById('l_pass').value;
+    if (!/^09\d{8}$/.test(phone)){document.getElementById('e_l_phone').textContent='رقم غير صالح'; return false}
+    if (!pass){document.getElementById('e_l_pass').textContent='مطلوب'; return false}
+    var users=getUsers();
+    var u=users.find(function(x){return x.phone===phone && x.pass===pass});
+    if (!u){document.getElementById('msgLogin').textContent='بيانات الدخول غير صحيحة'; return false}
+    setCurrent(u);
+    document.getElementById('msgLogin').textContent='أهلاً '+u.name+' — جاري التحويل...';
+    setTimeout(function(){location.href='index.html'}, 700);
+    return false;
+  }
+</script>
+</body>
+</html>

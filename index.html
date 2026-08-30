@@ -87,6 +87,7 @@
     <img src="images/logo.png" alt="شعار أُجْرَه" class="logo">
     <h1>أُجْرَه</h1>
     <p>تطبيق التوصيل داخل سوريا — من الانطلاق إلى الوجهة بأُجْرَه</p>
+    <div id="authBar" style="margin-top:10px;font-size:14px"></div>
   </header>
 
   <div class="container">
@@ -280,6 +281,8 @@
     }
 
     function requestRide() {
+      var curUser=null; try{curUser=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
+      if (!curUser) { if (!confirm('يجب التسجيل/الدخول أولاً لطلب سيارة. الانتقال لصفحة التسجيل؟')) return; location.href='auth.html'; return; }
       var from = document.getElementById('from').value.trim();
       var to = document.getElementById('to').value.trim();
       var cur = document.getElementById('currency').value;
@@ -339,6 +342,17 @@
       }
       box.innerHTML = html;
     }
+
+    // شريط التسجيل
+    (function(){
+      var bar=document.getElementById('authBar');
+      var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
+      if (cur) {
+        bar.innerHTML='مرحباً <b>'+cur.name+'</b> ('+(cur.role==='driver'?'سائق':'راكب')+' — '+cur.phone+') &nbsp; <a href="#" onclick="localStorage.removeItem(\'ajrah_current\');location.reload();return false" style="color:#7ec8ff">خروج</a> &nbsp;|&nbsp; <a href="auth.html" style="color:#E8C45A">إدارة الحساب</a>';
+      } else {
+        bar.innerHTML='<a href="auth.html" style="display:inline-block;padding:8px 14px;border-radius:20px;background:rgba(212,175,90,0.15);border:1px solid rgba(212,175,90,0.4);color:#E8C45A;text-decoration:none">سجّل / ادخل — التسجيل مطلوب لطلب الرحلة</a>';
+      }
+    })();
 
     // افتراضي: درعا → مطار دمشق
     requestRide();
