@@ -99,7 +99,7 @@
         </div>
         <div class="field">
           <label>رقم الهاتف (واتساب)</label>
-          <input id="d_phone" placeholder="09xxxxxxxx">
+          <input id="d_phone" placeholder="أي رقم هاتف">
           <div class="err" id="e_d_phone"></div>
         </div>
       </div>
@@ -242,7 +242,7 @@
       if (!/^\d{8,}$/.test(idn)) { setError('d_id','رقم هوية غير صالح'); ok=false; }
       if (!birth) { setError('d_birth','مطلوب'); ok=false; }
       else if (yearsBetween(new Date(birth), today) < MIN_DRIVER_AGE) { setError('d_birth','العمر يجب ألا يقل عن '+MIN_DRIVER_AGE+' سنة'); ok=false; }
-      if (!/^09\d{8}$/.test(phone)) { setError('d_phone','رقم هاتف غير صالح'); ok=false; }
+      var dDigits=phone.replace(/\D/g,''); if (dDigits.length<7 || dDigits.length>15) { setError('d_phone','رقم هاتف غير صالح (7-15 رقم)'); ok=false; }
       if (!city) { setError('d_city','اختر المحافظة'); ok=false; }
       if (!lic) { setError('d_lic','مطلوب'); ok=false; }
       if (!licexp || new Date(licexp) <= today) { setError('d_lic_exp','يجب أن يكون تاريخ انتهاء الرخصة في المستقبل'); ok=false; }

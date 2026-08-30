@@ -52,8 +52,8 @@
         <div class="err" id="e_r_name"></div>
       </div>
       <div class="field">
-        <label>رقم الهاتف (09xxxxxxxx) — سيكون اسم المستخدم</label>
-        <input id="r_phone" placeholder="09xxxxxxxx">
+        <label>رقم الهاتف — سيكون اسم المستخدم</label>
+        <input id="r_phone" placeholder="أي رقم هاتف (محلي أو دولي)">
         <div class="err" id="e_r_phone"></div>
       </div>
       <div class="grid">
@@ -114,7 +114,7 @@
     <form id="formLogin" class="hidden" onsubmit="return doLogin(event)">
       <div class="field">
         <label>رقم الهاتف</label>
-        <input id="l_phone" placeholder="09xxxxxxxx">
+        <input id="l_phone" placeholder="أي رقم هاتف">
         <div class="err" id="e_l_phone"></div>
       </div>
       <div class="field">
@@ -152,7 +152,7 @@
     var pass2=document.getElementById('r_pass2').value;
     var role=document.getElementById('r_role').value;
     if (!name) {document.getElementById('e_r_name').textContent='مطلوب'; ok=false}
-    if (!/^09\d{8}$/.test(phone)) {document.getElementById('e_r_phone').textContent='رقم سوري 10 أرقام يبدأ بـ 09'; ok=false}
+    var digits_r=phone.replace(/\D/g,''); if (digits_r.length<7 || digits_r.length>15) {document.getElementById('e_r_phone').textContent='رقم هاتف غير صالح (7-15 رقم)'; ok=false}
     if (pass.length<6) {document.getElementById('e_r_pass').textContent='6 أحرف على الأقل'; ok=false}
     if (pass!==pass2) {document.getElementById('e_r_pass2').textContent='غير مطابق'; ok=false}
     if (role==='driver'){
@@ -180,7 +180,7 @@
     e.preventDefault(); clearErrs();
     var phone=document.getElementById('l_phone').value.trim();
     var pass=document.getElementById('l_pass').value;
-    if (!/^09\d{8}$/.test(phone)){document.getElementById('e_l_phone').textContent='رقم غير صالح'; return false}
+    var digits_l=phone.replace(/\D/g,''); if (digits_l.length<7 || digits_l.length>15){document.getElementById('e_l_phone').textContent='رقم غير صالح'; return false}
     if (!pass){document.getElementById('e_l_pass').textContent='مطلوب'; return false}
     var users=getUsers();
     var u=users.find(function(x){return x.phone===phone && x.pass===pass});
