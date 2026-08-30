@@ -90,7 +90,7 @@
     <div id="authBar" style="margin-top:10px;font-size:14px"></div>
   </header>
 
-  <div id="welcomeOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;align-items:center;justify-content:center;padding:4vw">
+  <div id="welcomeOverlay" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;align-items:center;justify-content:center;padding:4vw">
     <div style="background:#111;border:1px solid #E8C45A;border-radius:18px;padding:4vh 5vw;max-width:480px;width:100%;text-align:center">
       <img src="images/logo.png" style="width:90px;height:90px;object-fit:contain;margin-bottom:10px">
       <h2 style="color:#E8C45A">مرحباً بك في أُجْرَه</h2>
@@ -364,11 +364,12 @@
     (function(){
       var bar=document.getElementById('authBar');
       var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
+      var ov=document.getElementById('welcomeOverlay');
       if (cur) {
         bar.innerHTML='مرحباً <b>'+cur.name+'</b> ('+(cur.role==='driver'?'سائق':'راكب')+' — '+cur.phone+') &nbsp; <a href="#" onclick="localStorage.removeItem(\'ajrah_current\');location.reload();return false" style="color:#7ec8ff">خروج</a> &nbsp;|&nbsp; <a href="auth.html" style="color:#E8C45A">إدارة الحساب</a>';
+        if (ov) ov.style.display='none';
       } else {
         bar.innerHTML='<a href="auth.html" style="display:inline-block;padding:8px 14px;border-radius:20px;background:rgba(212,175,90,0.15);border:1px solid rgba(212,175,90,0.4);color:#E8C45A;text-decoration:none">سجّل / ادخل — التسجيل مطلوب لطلب الرحلة</a>';
-        var ov=document.getElementById('welcomeOverlay');
         if (ov) ov.style.display='flex';
       }
     })();
