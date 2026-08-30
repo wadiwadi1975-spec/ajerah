@@ -130,6 +130,16 @@
 </div>
 <footer>نموذج أولي لمشروع «أُجْرَه»</footer>
 <script>
+  // دعم ?role=passenger|driver عند فتح التطبيق لأول مرة
+  window.addEventListener('DOMContentLoaded', function(){
+    var p=new URLSearchParams(location.search);
+    var r=p.get('role');
+    if (r==='driver' || r==='passenger'){
+      document.getElementById('r_role').value=r;
+      toggleDriverFields();
+    }
+    if (p.get('tab')==='login') switchTab('login');
+  });
   function switchTab(which){
     document.getElementById('tabReg').classList.toggle('active', which==='reg');
     document.getElementById('tabLogin').classList.toggle('active', which==='login');
