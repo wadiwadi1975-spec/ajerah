@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أُجْرَه — المحفظة</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="images/icon-180.png">
+<meta name="theme-color" content="#000000">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Cairo',Tahoma,sans-serif;background:#000;color:#E8C45A;min-height:100vh}
+  header{text-align:center;padding:3vh 3vw}
+  header .logo{width:80px;height:80px;object-fit:contain}
+  .container{max-width:720px;margin:0 auto;padding:0 4vw}
+  .card{background:rgba(255,255,255,0.06);border:1px solid rgba(212,175,90,0.4);border-radius:18px;padding:3vh 5vw;margin-bottom:2vh}
+  .btn{padding:12px 16px;border:none;border-radius:12px;background:linear-gradient(135deg,#E8C45A 0%,#c79a2e 100%);color:#000;font-weight:800;cursor:pointer;font-family:inherit}
+  .danger{color:#ff8a8a}
+  .muted{color:#c9d8cf;font-size:13px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.1);text-align:right}
+  th{color:#E8C45A}
+  a{color:#7ec8ff}
+</style>
+</head>
+<body>
+<header>
+  <img src="images/logo.png" class="logo" alt="شعار أُجْرَه">
+  <h2>محفظة السائق</h2>
+  <div style="margin-top:6px"><a href="index.html">→ العودة للرئيسية</a></div>
+</header>
+<div class="container">
+  <div class="card" id="walletCard">جاري التحميل...</div>
+  <div class="card">
+    <h3 style="margin-bottom:8px">سجل الرحلات</h3>
+    <div id="history"></div>
+  </div>
+  <div class="card muted">
+    الآلية: الدفع الإلكتروني يخصم العمولة (15%) تلقائياً. الدفع النقدي يتراكم في الرصيد المستحق. عند وصوله لحد <b>200,000 ل.س</b> يُطلب التسديد وإلا يُعلّق الظهور ضمن 1 كم. الاشتراك الاختياري للمحترفين يخفض العمولة إلى 10% (قريباً).
+  </div>
+</div>
+<script>
+  function fmtSYP(n){ return Math.round(n).toLocaleString('ar-SY')+' ل.س'; }
+  var THRESH=200000;
+  var RATE=0.15;
+  function load(){
+    var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
+    if (!cur) { document.getElementById('walletCard').innerHTML='يجب تسجيل دخول كـ سائق أولاً. <a href="auth.html">تسجيل</a>'; return; }
+    if (cur.role!=='driver'){ document.getElementById('walletCard').innerHTML='المحفظة خاصة بالسائقين. حسابك الحالي راكب.'; return; }
+    var due=parseInt(localStorage.getItem('ajrah_wallet_due')||'0',10);
+    var card=document.getElementById('walletCard');
+    var warn = due>=THRESH ? '<div class="danger">وصلت الحد — يجب تسديد المستحقات ليبقى حسابك نشطاً ضمن 1 كم.</div>' : '<div class="muted">الحساب نشط — يظهر ضمن 1 كم حول طالبي الأجرة.</div>';
+    card.innerHTML = '<div>مرحباً <b>'+cur.name+'</b> — '+cur.phone+' ('+cur.vehicle.type+')</div>' +
+      '<div style="margin:10px 0;font-size:22px">الرصيد المستحق (عمولات نقدية متراكمة): <b>'+fmtSYP(due)+'</b></div>' +
+      warn +
+      '<div style="margin-top:12px"><button class="btn" onclick="payNow()">تسديد المستحقات (محاكاة)</button> <button class="btn" style="background:#333;color:#fff;margin-right:8px" onclick="clearWallet()">تصفير (للتجربة)</button></div>';
+    var rides=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
+    var h=document.getElementById('history');
+    if (!rides.length) h.innerHTML='<div class="muted">لا توجد رحلات بعد. اطلب رحلة من index.html واختر نقدي لترى التراكم.</div>';
+    else {
+      var html='<table><tr><th>التاريخ</th><th>السائق</th><th>الدفع</th><th>الأجر</th><th>العمولة</th></tr>';
+      for (var i=rides.length-1;i>=0;i--){
+        var r=rides[i];
+        html+='<tr><td>'+new Date(r.at).toLocaleString('ar-SY')+'</td><td>'+r.driver+'</td><td>'+(r.pay==='cash'?'نقدي':'إلكتروني')+'</td><td>'+fmtSYP(r.fare)+'</td><td>'+fmtSYP(r.fee)+'</td></tr>';
+      }
+      html+='</table>';
+      h.innerHTML=html;
+    }
+  }
+  function payNow(){
+    var due=parseInt(localStorage.getItem('ajrah_wallet_due')||'0',10);
+    if (!due) { alert('لا يوجد مستحقات'); return; }
+    if (confirm('تأكيد تسديد '+fmtSYP(due)+' إلكترونياً؟ (محاكاة)')) {
+      localStorage.setItem('ajrah_wallet_due','0');
+      alert('تم التسديد — شكراً. حسابك نشط.');
+      load();
+    }
+  }
+  function clearWallet(){ localStorage.setItem('ajrah_wallet_due','0'); load(); }
+  load();
+</script>
+</body>
+</html>
