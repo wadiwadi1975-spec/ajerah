@@ -68,9 +68,11 @@
   .info b { color: #E8C45A; }
   .driver-card { display: none; text-align: center; line-height: 1.9; }
   .driver-card.active { display: block; }
-  .driver-card h3 { font-size: 20px; margin-bottom: 8px; }
-  .driver-card .phone { direction: ltr; font-weight: 800; color: #E8C45A; font-size: 20px; }
+  .driver-card h3 { font-size: 20px; margin-bottom: 10px; }
+  .driver-card .phone { direction: ltr; font-weight: 800; color: #E8C45A; font-size: 18px; }
   .driver-card .badge { display: inline-block; background: rgba(212,175,90,0.18); border: 1px solid rgba(212,175,90,0.4); padding: 4px 10px; border-radius: 20px; font-size: 14px; margin: 2px; }
+  .driver-opt { background: rgba(0,0,0,0.22); border: 1px solid rgba(212,175,90,0.28); border-radius: 14px; padding: 12px; margin: 10px 0; text-align: right; }
+  .driver-opt .opt-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
 
   .cities { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 1vh; }
   .city {
@@ -211,75 +213,99 @@
       return 2*R*Math.asin(Math.sqrt(h));
     }
 
-    function drawRoute(from, to, driver) {
+    function drawRoute(from, to, drivers) {
       routeLayer.clearLayers();
       var A = CITIES[from], B = CITIES[to];
       L.marker([A.lat, A.lng]).addTo(routeLayer).bindPopup('نقطة الانطلاق: ' + from);
       L.marker([B.lat, B.lng]).addTo(routeLayer).bindPopup('الوجهة: ' + to);
       L.polyline([[A.lat,A.lng],[B.lat,B.lng]], {color:'#E8C45A', weight:4}).addTo(routeLayer);
-      if (driver) {
-        var dIcon = L.divIcon({ html:'🚕', className:'', iconSize:[24,24] });
-        L.marker([driver.lat, driver.lng], {icon:dIcon}).addTo(routeLayer).bindPopup('السائق: ' + driver.name);
-        L.polyline([[driver.lat, driver.lng],[A.lat, A.lng]], {color:'#7ec8ff', weight:2, dashArray:'6 6'}).addTo(routeLayer);
-        map.fitBounds([[A.lat,A.lng],[B.lat,B.lng],[driver.lat,driver.lng]], {padding:[40,40]});
-      } else {
-        map.fitBounds([[A.lat,A.lng],[B.lat,B.lng]], {padding:[40,40]});
+      var bounds = [[A.lat,A.lng],[B.lat,B.lng]];
+      if (drivers && drivers.length) {
+        for (var i=0;i<drivers.length;i++){
+          var d = drivers[i];
+          var dIcon = L.divIcon({ html: d.type==='bus' ? '🚌' : (d.type==='van' ? '🚐' : '🚕'), className:'', iconSize:[24,24] });
+          L.marker([d.lat, d.lng], {icon:dIcon}).addTo(routeLayer).bindPopup(d.name + ' (' + VEHICLES[d.type].name + ')');
+          L.polyline([[d.lat, d.lng],[A.lat, A.lng]], {color:'#7ec8ff', weight:2, dashArray:'6 6', opacity:0.6}).addTo(routeLayer);
+          bounds.push([d.lat, d.lng]);
+        }
       }
+      map.fitBounds(bounds, {padding:[40,40]});
     }
 
-    function findNearestDriver(originCoords, requestedType) {
-      var best = null, bestDist = Infinity;
-      for (var i=0;i<DRIVERS.length;i++){
-        var d = DRIVERS[i];
-        if (!d.available) continue;
-        if (d.type !== requestedType) continue;
-        var dist = haversine(originCoords, {lat:d.lat, lng:d.lng});
-        if (dist < bestDist) { bestDist = dist; best = d; best._dist = dist; }
+    function findNearestPerType(originCoords, types) {
+      var res = [];
+      for (var t=0;t<types.length;t++){
+        var type = types[t];
+        var best = null, bestDist = Infinity;
+        for (var i=0;i<DRIVERS.length;i++){
+          var d = DRIVERS[i];
+          if (!d.available || d.type !== type) continue;
+          var dist = haversine(originCoords, {lat:d.lat, lng:d.lng});
+          if (dist < bestDist) { bestDist = dist; best = d; }
+        }
+        if (best) {
+          var copy = Object.assign({}, best);
+          copy._dist = bestDist;
+          res.push(copy);
+        }
       }
-      return best;
+      return res;
     }
 
     function requestRide() {
       var from = document.getElementById('from').value.trim();
       var to = document.getElementById('to').value.trim();
-      var reqType = document.getElementById('vehicle').value;
       var cur = document.getElementById('currency').value;
       if (!from || !to) { alert('الرجاء إدخال نقطة الانطلاق والوجهة'); return; }
       if (!CITIES[from] || !CITIES[to]) {
         document.getElementById('info').innerHTML = 'المكان غير موجود بعد. المتاح: ' + Object.keys(CITIES).join('، ');
         return;
       }
-      var v = VEHICLES[reqType];
       var lineDist = haversine(CITIES[from], CITIES[to]);
       var roadDist = lineDist * ROAD_FACTOR;
-      var timeMin = roadDist / v.speed * 60;
-      var fareSYP = Math.round(v.base + v.perKm * roadDist + v.perMin * timeMin);
 
-      var driver = findNearestDriver(CITIES[from], reqType);
-      drawRoute(from, to, driver);
+      // اعرض على الأقل ثلاثة خيارات: تاكسي + فان + باص
+      var wantedTypes = ['taxi','van','bus'];
+      var options = findNearestPerType(CITIES[from], wantedTypes);
+      // إن لم يوجد أيٌّ من الثلاثة، جرّب السيارة الخاصة كخيار إضافي
+      if (options.length < 3) {
+        var extra = findNearestPerType(CITIES[from], ['private']);
+        for (var k=0;k<extra.length;k++) if (options.length < 3) options.push(extra[k]);
+      }
 
-      var main, sub;
-      if (cur === 'usd') { main = fmtUSD(fareSYP / RATE); sub = '≈ ' + fmtSYP(fareSYP); }
-      else { main = fmtSYP(fareSYP); sub = '≈ ' + fmtUSD(fareSYP / RATE); }
+      drawRoute(from, to, options);
 
+      // ملخص المسافة (مشترك)
       document.getElementById('info').innerHTML =
-        'الخط: <b>' + from + ' ←→ ' + to + '</b> — <b>' + v.name + '</b><br>' +
-        'المسافة التقديرية: <b>' + roadDist.toFixed(1) + ' كم</b> — الوقت: <b>' + Math.round(timeMin) + ' دقيقة</b><br>' +
-        'الأجر المتوقع: <b>' + main + '</b> <span style="font-size:14px;opacity:.8">(' + sub + ' | 1$ = ' + RATE.toLocaleString('ar-SY') + ' ل.س)</span>';
+        'الخط: <b>' + from + ' ←→ ' + to + '</b><br>' +
+        'المسافة التقديرية على الطريق: <b>' + roadDist.toFixed(1) + ' كم</b>';
 
       var card = document.getElementById('driverCard');
       var box = document.getElementById('driverInfo');
-      if (!driver) {
-        card.classList.add('active');
-        box.innerHTML = 'لا توجد سيارة متاحة من نوع <b>' + v.name + '</b> قرب <b>' + from + '</b> حالياً. جرّب نوعاً آخر.';
-      } else {
-        card.classList.add('active');
-        box.innerHTML =
-          '<span class="badge">' + v.name + '</span> <span class="badge">' + driver.model + '</span> <span class="badge">' + driver.plate + '</span><br>' +
-          '<div style="margin:8px 0">' + driver.name + ' — يبعد <b>' + driver._dist.toFixed(1) + ' كم</b> عن نقطة الانطلاق</div>' +
-          '<div>رقم السائق: <a class="phone" href="tel:' + driver.phone + '">' + driver.phone + '</a></div>' +
-          '<div style="margin-top:6px; font-size:14px; opacity:.85">سيتواصل معك السائق بعد تأكيد الطلب</div>';
+      card.classList.add('active');
+
+      if (!options.length) {
+        box.innerHTML = 'لا توجد سيارات متاحة حالياً قرب <b>' + from + '</b>. حاول لاحقاً.';
+        return;
       }
+
+      var html = '<div style="font-size:13px;opacity:.8;margin-bottom:8px">اختر نوع السيارة المناسب لك — كل خيار يظهر أجرته ورقم سائقه</div>';
+      for (var i=0;i<options.length;i++){
+        var d = options[i];
+        var v = VEHICLES[d.type];
+        var timeMin = roadDist / v.speed * 60;
+        var fareSYP = Math.round(v.base + v.perKm * roadDist + v.perMin * timeMin);
+        var main, sub;
+        if (cur === 'usd') { main = fmtUSD(fareSYP / RATE); sub = '≈ ' + fmtSYP(fareSYP); }
+        else { main = fmtSYP(fareSYP); sub = '≈ ' + fmtUSD(fareSYP / RATE); }
+        html += '<div class="driver-opt">' +
+          '<div class="opt-head"><span class="badge">' + v.name + '</span><span style="font-size:13px;opacity:.85">يبعد ' + d._dist.toFixed(1) + ' كم</span></div>' +
+          '<div style="margin:6px 0">' + d.name + ' — ' + d.model + ' — <span style="opacity:.85">' + d.plate + '</span></div>' +
+          '<div>الأجر: <b>' + main + '</b> <span style="font-size:13px;opacity:.8">(' + sub + ')</span> — ' + Math.round(timeMin) + ' دقيقة</div>' +
+          '<div style="margin-top:6px">رقم السائق: <a class="phone" href="tel:' + d.phone + '">' + d.phone + '</a></div>' +
+          '</div>';
+      }
+      box.innerHTML = html;
     }
 
     // افتراضي: درعا → مطار دمشق
