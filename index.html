@@ -387,9 +387,8 @@
         html += '<div class="driver-opt">' +
           '<div class="opt-head"><span class="badge">' + v.name + '</span><span style="font-size:13px;opacity:.85">يبعد ' + d._dist.toFixed(2) + ' كم</span></div>' +
           '<div style="margin:6px 0">' + d.name + ' — ' + d.model + '</div>' +
-          '<div>قيمة الرحلة: <b>' + main + '</b> <span style="font-size:13px;opacity:.8">(' + sub + ')</span> — ' + Math.round(timeMin) + ' د</div>' +
-          '<div style="font-size:13px">رسوم أُجْرَه (15%): <b>' + fee + '</b> — صافي السائق: <b>' + net + '</b></div>' +
-          '<div style="font-size:12px;opacity:.75">' + (payMethod==='cash' ? 'الدفع نقدي: يحدده العميل هنا، ويؤكد السائق استلامه لاحقاً' : 'الدفع إلكتروني: تخصم الرسوم تلقائياً') + '</div>' +
+          '<div>الأجر الإجمالي: <b>' + main + '</b> <span style="font-size:13px;opacity:.8">(' + sub + ')</span> — ' + Math.round(timeMin) + ' د</div>' +
+          '<div style="font-size:12px;opacity:.75">' + (payMethod==='cash' ? 'الدفع نقدي' : 'الدفع إلكتروني') + '</div>' +
           '<div style="margin-top:6px"><button onclick="bookRide('+i+')" style="padding:6px 14px;border-radius:10px;border:none;background:#E8C45A;color:#000;font-weight:700;cursor:pointer">تأكيد الحجز مع هذا السائق</button> <span style="font-size:12px;opacity:.65">رقم السائق يظهر بعد القبول</span></div>' +
           '</div>';
       }
@@ -420,10 +419,12 @@
       var rides=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
       rides.push(ride);
       localStorage.setItem('ajrah_rides', JSON.stringify(rides));
+      // للعميل: لا تُظهر تفاصيل العمولة (خاصة بين السائق وأُجْرَه)
+      var curDisp = document.getElementById('currency').value==='usd' ? fmtUSD(fareSYP/RATE) : fmtSYP(fareSYP);
       if (payMethod==='cash'){
-        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: نقدي (حددتها أنت).\nقيمة الرحلة: '+fmtSYP(fareSYP)+' — رسوم المنصة: '+fmtSYP(feeSYP)+' — صافي السائق: '+fmtSYP(netSYP)+'\nسيؤكد السائق استلام الطلب، وبعد إتمام الرحلة يضغط السائق "استلمت نقداً" لتُسجل العمولة في محفظته الخاصة. رقم السائق سيظهر للسائق فقط بعد القبول.');
+        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: نقدي.\nالأجر الإجمالي: '+curDisp+'\nسيؤكد السائق الطلب، ثم يظهر رقمه لك.');
       } else {
-        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: إلكتروني — ستُخصم الرسوم ('+fmtSYP(feeSYP)+') تلقائياً ويُحول الصافي ('+fmtSYP(netSYP)+') للسائق.');
+        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: إلكتروني.\nالأجر الإجمالي: '+curDisp);
       }
     }
 
