@@ -413,10 +413,19 @@
       localStorage.setItem('ajrah_rides', JSON.stringify(rides));
     }
 
-    // شريط التسجيل + ترحيب أول مرة
+    // شريط التسجيل + ترحيب أول مرة — حساب وهمي مؤقت للتطوير
     (function(){
       var bar=document.getElementById('authBar');
       var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
+      if (!cur){
+        var dummy={id:999,name:"مستخدم تجريبي",phone:"0990000000",pass:"123456",role:"passenger",createdAt:new Date().toISOString()};
+        try{
+          var users=JSON.parse(localStorage.getItem('ajrah_users')||'[]');
+          if (!users.find(function(u){return u.phone===dummy.phone})){ users.push(dummy); localStorage.setItem('ajrah_users', JSON.stringify(users)); }
+          localStorage.setItem('ajrah_current', JSON.stringify(dummy));
+          cur=dummy;
+        }catch(e){}
+      }
       var ov=document.getElementById('welcomeOverlay');
       if (cur) {
         var walletLink = cur.role==='driver' ? ' &nbsp;|&nbsp; <a href="wallet.html" style="color:#E8C45A">المحفظة ('+fmtSYP(getWalletDue())+')</a>' : '';
