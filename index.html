@@ -188,14 +188,17 @@
     function fmtSYP(n) { return Math.round(n).toLocaleString('ar-SY') + ' ل.س'; }
     function fmtUSD(n) { return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-    // سائقون تجريبيون يستخدمون التطبيق (بيانات أولية تجريبية)
+    var RADIUS_KM = 1; // نطاق البحث حول الراكب (كم)
+    // سائقون تجريبيون يستخدمون التطبيق (بيانات أولية تجريبية — جميعهم ضمن 1 كم من مراكز المدن للعرض التجريبي)
     var DRIVERS = [
       { name:"سائق 1 — أبو عمر", phone:"0991234567", type:"taxi",    model:"كيا ريو 2021",     plate:"284513/درعا",   lat:32.625, lng:36.105, available:true },
       { name:"سائق 2 — أبو خالد", phone:"0938765432", type:"private", model:"هيونداي أكسنت 2020", plate:"193211/دمشق",    lat:33.520, lng:36.280, available:true },
       { name:"سائق 3 — محمد",     phone:"0945123789", type:"taxi",    model:"تويوتا كورولا 2019", plate:"445102/دمشق",    lat:33.510, lng:36.300, available:true },
-      { name:"سائق 4 — أبو أحمد", phone:"0969345678", type:"van",     model:"فان هيونداي H1",    plate:"772301/درعا",   lat:32.615, lng:36.130, available:true },
+      { name:"سائق 4 — أبو أحمد", phone:"0969345678", type:"van",     model:"فان هيونداي H1",    plate:"772301/درعا",   lat:32.620, lng:36.100, available:true },
       { name:"سائق 5 — سامر",     phone:"0987654321", type:"private", model:"كيا سيراتو 2022",    plate:"561902/دمشق",    lat:33.400, lng:36.510, available:true },
-      { name:"سائق 6 — أبو ليث",  phone:"0933344556", type:"bus",     model:"حافلة 14 راكب",     plate:"881420/دمشق",    lat:33.480, lng:36.250, available:true }
+      { name:"سائق 6 — أبو ليث",  phone:"0933344556", type:"bus",     model:"حافلة 14 راكب",     plate:"881420/دمشق",    lat:33.515, lng:36.278, available:true },
+      { name:"سائق 7 — أبو وسيم", phone:"0949988776", type:"van",     model:"فان تويوتا هايس",   plate:"661230/دمشق",    lat:33.512, lng:36.275, available:true },
+      { name:"سائق 8 — أبو ناصر", phone:"0998765430", type:"bus",     model:"باص 24 راكب",       plate:"990112/درعا",   lat:32.618, lng:36.103, available:true }
     ];
 
     var map = L.map('map').setView([33.2, 36.4], 8);
@@ -241,6 +244,7 @@
           var d = DRIVERS[i];
           if (!d.available || d.type !== type) continue;
           var dist = haversine(originCoords, {lat:d.lat, lng:d.lng});
+          if (dist > RADIUS_KM) continue; // ضمن 1 كم فقط
           if (dist < bestDist) { bestDist = dist; best = d; }
         }
         if (best) {
@@ -264,10 +268,10 @@
       var lineDist = haversine(CITIES[from], CITIES[to]);
       var roadDist = lineDist * ROAD_FACTOR;
 
-      // اعرض على الأقل ثلاثة خيارات: تاكسي + فان + باص
+      // اعرض على الأقل ثلاثة خيارات ضمن 1 كم: تاكسي + فان + باص
       var wantedTypes = ['taxi','van','bus'];
       var options = findNearestPerType(CITIES[from], wantedTypes);
-      // إن لم يوجد أيٌّ من الثلاثة، جرّب السيارة الخاصة كخيار إضافي
+      // إن لم يكتمل العدد ضمن 1 كم، جرّب السيارة الخاصة كخيار إضافي ضمن نفس النطاق
       if (options.length < 3) {
         var extra = findNearestPerType(CITIES[from], ['private']);
         for (var k=0;k<extra.length;k++) if (options.length < 3) options.push(extra[k]);
@@ -285,11 +289,11 @@
       card.classList.add('active');
 
       if (!options.length) {
-        box.innerHTML = 'لا توجد سيارات متاحة حالياً قرب <b>' + from + '</b>. حاول لاحقاً.';
+        box.innerHTML = 'لا توجد سيارة ضمن <b>' + RADIUS_KM + ' كم</b> حول <b>' + from + '</b> حالياً. جرّب توسيع النطاق أو نوعاً آخر.';
         return;
       }
 
-      var html = '<div style="font-size:13px;opacity:.8;margin-bottom:8px">اختر نوع السيارة المناسب لك — كل خيار يظهر أجرته ورقم سائقه</div>';
+      var html = '<div style="font-size:13px;opacity:.8;margin-bottom:8px">السيارات ضمن <b>' + RADIUS_KM + ' كم</b> حول <b>' + from + '</b> — اختر النوع المناسب (الأجرة ووقت الوصول محسوبان لـ ' + to + ')</div>';
       for (var i=0;i<options.length;i++){
         var d = options[i];
         var v = VEHICLES[d.type];
