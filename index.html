@@ -144,13 +144,16 @@
             <option value="usd">$ — دولار أمريكي</option>
           </select>
         </div>
-        <div class="field">
-          <label>طريقة الدفع</label>
-          <select id="paymethod">
-            <option value="cash" selected>نقدي — أدفع للسائق مباشرة</option>
-            <option value="electronic">إلكتروني — عبر التطبيق (خصم تلقائي)</option>
-          </select>
-        </div>
+      <div class="field">
+        <label>طريقة الدفع</label>
+        <select id="paymethod">
+          <option value="cash" selected>نقدي — أدفع للسائق مباشرة</option>
+          <option value="shamcash">شام كاش</option>
+          <option value="syriatel">سيريتل كاش</option>
+          <option value="mtn">MTN كاش</option>
+          <option value="bank">تحويل بنكي</option>
+        </select>
+      </div>
       </div>
       <div class="field">
         <label>رقم هاتفك (ليتواصل السائق معك)</label>
@@ -222,6 +225,7 @@
 
     function fmtSYP(n) { return Math.round(n).toLocaleString('ar-SY') + ' ل.س'; }
     function fmtUSD(n) { return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function payLabel(p){ var m={cash:'نقدي', shamcash:'شام كاش', syriatel:'سيريتل كاش', mtn:'MTN كاش', bank:'تحويل بنكي', electronic:'إلكتروني'}; return m[p]||p; }
     function walletKey(phone){ return 'ajrah_wallet_'+phone; }
     function getWalletDueFor(phone){ return parseInt(localStorage.getItem(walletKey(phone))||'0',10); }
     function addWalletDueFor(phone, amount){ var cur=getWalletDueFor(phone)+amount; localStorage.setItem(walletKey(phone), cur); return cur; }
@@ -388,7 +392,7 @@
           '<div class="opt-head"><span class="badge">' + v.name + '</span><span style="font-size:13px;opacity:.85">يبعد ' + d._dist.toFixed(2) + ' كم</span></div>' +
           '<div style="margin:6px 0">' + d.name + ' — ' + d.model + '</div>' +
           '<div>الأجر الإجمالي: <b>' + main + '</b> <span style="font-size:13px;opacity:.8">(' + sub + ')</span> — ' + Math.round(timeMin) + ' د</div>' +
-          '<div style="font-size:12px;opacity:.75">' + (payMethod==='cash' ? 'الدفع نقدي' : 'الدفع إلكتروني') + '</div>' +
+          '<div style="font-size:12px;opacity:.75">طريقة الدفع: ' + payLabel(payMethod) + '</div>' +
           '<div style="margin-top:6px"><button onclick="bookRide('+i+')" style="padding:6px 14px;border-radius:10px;border:none;background:#E8C45A;color:#000;font-weight:700;cursor:pointer">تأكيد الحجز مع هذا السائق</button> <span style="font-size:12px;opacity:.65">رقم السائق يظهر بعد القبول</span></div>' +
           '</div>';
       }
@@ -419,12 +423,12 @@
       var rides=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
       rides.push(ride);
       localStorage.setItem('ajrah_rides', JSON.stringify(rides));
-      // للعميل: لا تُظهر تفاصيل العمولة (خاصة بين السائق وأُجْرَه)
+      // للعميل: لا تُظهر تفاصيل العمولة
       var curDisp = document.getElementById('currency').value==='usd' ? fmtUSD(fareSYP/RATE) : fmtSYP(fareSYP);
       if (payMethod==='cash'){
-        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: نقدي.\nالأجر الإجمالي: '+curDisp+'\nسيؤكد السائق الطلب، ثم يظهر رقمه لك.');
+        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: '+payLabel(payMethod)+'.\nالأجر الإجمالي: '+curDisp+'\nسيؤكد السائق الطلب، ثم يظهر رقمه لك.');
       } else {
-        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: إلكتروني.\nالأجر الإجمالي: '+curDisp);
+        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: '+payLabel(payMethod)+'.\nالأجر الإجمالي: '+curDisp);
       }
     }
 

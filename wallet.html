@@ -42,6 +42,7 @@
 </div>
 <script>
   function fmtSYP(n){ return Math.round(n).toLocaleString('ar-SY')+' ل.س'; }
+  function payLabel(p){ var m={cash:'نقدي', shamcash:'شام كاش', syriatel:'سيريتل كاش', mtn:'MTN كاش', bank:'تحويل بنكي', electronic:'إلكتروني'}; return m[p]||p; }
   var THRESH=200000;
   function walletKey(phone){ return 'ajrah_wallet_'+phone; }
   function getDue(phone){ return parseInt(localStorage.getItem(walletKey(phone))||'0',10); }
@@ -95,7 +96,7 @@
         else if (r.status==='accepted' && r.pay==='electronic') action='<button class="btn" style="padding:6px 10px;font-size:13px" onclick="completeElectronic('+realIdx+')">إتمام (إلكتروني)</button>';
         else action='<span class="muted">—</span>';
       }
-      html+='<tr><td>'+new Date(r.at).toLocaleString('ar-SY')+'</td><td>'+route+'</td><td>'+passenger+'</td><td>'+(r.pay==='cash'?'نقدي<br><span style="font-size:11px">يحدده العميل</span>':'إلكتروني')+'</td><td>'+fmtSYP(r.fare)+'</td><td>'+fmtSYP(r.fee)+'</td><td>'+fmtSYP(net)+'</td><td>'+status+'</td><td>'+action+'</td></tr>';
+      html+='<tr><td>'+new Date(r.at).toLocaleString('ar-SY')+'</td><td>'+route+'</td><td>'+passenger+'</td><td>'+payLabel(r.pay)+'</td><td>'+fmtSYP(r.fare)+'</td><td>'+fmtSYP(r.fee)+'</td><td>'+fmtSYP(net)+'</td><td>'+status+'</td><td>'+action+'</td></tr>';
     }
     html+='</table>';
     h.innerHTML=html;
