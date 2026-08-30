@@ -222,8 +222,11 @@
 
     function fmtSYP(n) { return Math.round(n).toLocaleString('ar-SY') + ' ل.س'; }
     function fmtUSD(n) { return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
-    function getWalletDue(){ return parseInt(localStorage.getItem('ajrah_wallet_due')||'0',10); }
-    function addWalletDue(amount){ var cur=getWalletDue()+amount; localStorage.setItem('ajrah_wallet_due', cur); return cur; }
+    function walletKey(phone){ return 'ajrah_wallet_'+phone; }
+    function getWalletDueFor(phone){ return parseInt(localStorage.getItem(walletKey(phone))||'0',10); }
+    function addWalletDueFor(phone, amount){ var cur=getWalletDueFor(phone)+amount; localStorage.setItem(walletKey(phone), cur); return cur; }
+    function getWalletDue(){ var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){} if(!cur||cur.role!=='driver') return 0; return getWalletDueFor(cur.phone); }
+    function addWalletDue(amount){ var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){} if(!cur||cur.role!=='driver') return 0; return addWalletDueFor(cur.phone, amount); }
 
     var RADIUS_KM = 1; // نطاق البحث حول الراكب (كم)
     // سائقون تجريبيون يستخدمون التطبيق (بيانات أولية تجريبية — جميعهم ضمن 1 كم من مراكز المدن للعرض التجريبي)
@@ -383,11 +386,11 @@
         }
         html += '<div class="driver-opt">' +
           '<div class="opt-head"><span class="badge">' + v.name + '</span><span style="font-size:13px;opacity:.85">يبعد ' + d._dist.toFixed(2) + ' كم</span></div>' +
-          '<div style="margin:6px 0">' + d.name + ' — ' + d.model + ' — <span style="opacity:.85">' + d.plate + '</span></div>' +
+          '<div style="margin:6px 0">' + d.name + ' — ' + d.model + '</div>' +
           '<div>قيمة الرحلة: <b>' + main + '</b> <span style="font-size:13px;opacity:.8">(' + sub + ')</span> — ' + Math.round(timeMin) + ' د</div>' +
           '<div style="font-size:13px">رسوم أُجْرَه (15%): <b>' + fee + '</b> — صافي السائق: <b>' + net + '</b></div>' +
-          '<div style="font-size:12px;opacity:.75">' + (payMethod==='cash' ? 'الدفع نقدي: تتراكم الرسوم في محفظة السائق' : 'الدفع إلكتروني: تخصم الرسوم تلقائياً') + '</div>' +
-          '<div style="margin-top:6px">رقم السائق: <a class="phone" href="tel:' + d.phone + '">' + d.phone + '</a> <button onclick="bookRide('+i+')" style="margin-right:8px;padding:6px 12px;border-radius:10px;border:none;background:#E8C45A;color:#000;font-weight:700;cursor:pointer">تأكيد الحجز</button></div>' +
+          '<div style="font-size:12px;opacity:.75">' + (payMethod==='cash' ? 'الدفع نقدي: يحدده العميل هنا، ويؤكد السائق استلامه لاحقاً' : 'الدفع إلكتروني: تخصم الرسوم تلقائياً') + '</div>' +
+          '<div style="margin-top:6px"><button onclick="bookRide('+i+')" style="padding:6px 14px;border-radius:10px;border:none;background:#E8C45A;color:#000;font-weight:700;cursor:pointer">تأكيد الحجز مع هذا السائق</button> <span style="font-size:12px;opacity:.65">رقم السائق يظهر بعد القبول</span></div>' +
           '</div>';
       }
       box.innerHTML = html;
@@ -399,18 +402,29 @@
       var timeMin = roadDist / v.speed * 60;
       var fareSYP = Math.round(v.base + v.perKm * roadDist + v.perMin * timeMin);
       var feeSYP = Math.round(fareSYP * COMMISSION_RATE);
+      var netSYP = fareSYP - feeSYP;
       var payMethod = document.getElementById('paymethod').value;
-      if (payMethod==='cash'){
-        var due = addWalletDue(feeSYP);
-        var msg = 'تم الحجز مع '+d.name+' ('+v.name+'). الدفع نقدي — تراكمت رسوم '+fmtSYP(feeSYP)+' في محفظة السائق. الرصيد المستحق الآن: '+fmtSYP(due);
-        if (due >= WALLET_THRESHOLD) msg += ' — وصلت الحد، يجب التسديد قريباً.';
-        alert(msg + '\nسيتواصل السائق على '+d.phone);
-      } else {
-        alert('تم الحجز مع '+d.name+' ('+v.name+'). الدفع إلكتروني — خصمت رسوم '+fmtSYP(feeSYP)+' تلقائياً. صافي السائق: '+fmtSYP(fareSYP-feeSYP));
-      }
-      var rides = JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
-      rides.push({at:new Date().toISOString(), driver:d.name, type:d.type, fare:fareSYP, fee:feeSYP, pay:payMethod});
+      var curUser=null; try{curUser=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
+      var fromLabel = document.getElementById('from').value.trim() + (userPos ? ' (موقع دقيق)' : '');
+      var toLabel = document.getElementById('to').value.trim();
+      // إنشاء طلب بحالة معلق — لا تُكشف بيانات السائق الخاصة للزبون إلا بعد قبول السائق
+      var ride={
+        id: Date.now(),
+        at: new Date().toISOString(),
+        passenger: curUser ? {name:curUser.name, phone:curUser.phone} : {name:'ضيف', phone:document.getElementById('p_phone').value.trim()||'—'},
+        driver: {name:d.name, phone:d.phone, type:d.type, model:d.model, plate:d.plate},
+        from: fromLabel, to: toLabel,
+        fare: fareSYP, fee: feeSYP, net: netSYP,
+        pay: payMethod, status: 'pending'
+      };
+      var rides=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
+      rides.push(ride);
       localStorage.setItem('ajrah_rides', JSON.stringify(rides));
+      if (payMethod==='cash'){
+        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: نقدي (حددتها أنت).\nقيمة الرحلة: '+fmtSYP(fareSYP)+' — رسوم المنصة: '+fmtSYP(feeSYP)+' — صافي السائق: '+fmtSYP(netSYP)+'\nسيؤكد السائق استلام الطلب، وبعد إتمام الرحلة يضغط السائق "استلمت نقداً" لتُسجل العمولة في محفظته الخاصة. رقم السائق سيظهر للسائق فقط بعد القبول.');
+      } else {
+        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: إلكتروني — ستُخصم الرسوم ('+fmtSYP(feeSYP)+') تلقائياً ويُحول الصافي ('+fmtSYP(netSYP)+') للسائق.');
+      }
     }
 
     // شريط التسجيل + ترحيب أول مرة — حساب وهمي مؤقت للتطوير

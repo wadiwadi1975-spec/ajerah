@@ -43,41 +43,115 @@
 <script>
   function fmtSYP(n){ return Math.round(n).toLocaleString('ar-SY')+' ل.س'; }
   var THRESH=200000;
-  var RATE=0.15;
+  function walletKey(phone){ return 'ajrah_wallet_'+phone; }
+  function getDue(phone){ return parseInt(localStorage.getItem(walletKey(phone))||'0',10); }
   function load(){
     var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
     if (!cur) { document.getElementById('walletCard').innerHTML='يجب تسجيل دخول كـ سائق أولاً. <a href="auth.html">تسجيل</a>'; return; }
-    if (cur.role!=='driver'){ document.getElementById('walletCard').innerHTML='المحفظة خاصة بالسائقين. حسابك الحالي راكب.'; return; }
-    var due=parseInt(localStorage.getItem('ajrah_wallet_due')||'0',10);
+    if (cur.role!=='driver'){ 
+      // للراكب: اعرض رحلاته فقط دون محفظة
+      var ridesAll=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
+      var mine=ridesAll.filter(function(r){ return r.passenger && r.passenger.phone===cur.phone; });
+      document.getElementById('walletCard').innerHTML='<div>حساب راكب: <b>'+cur.name+'</b> — '+cur.phone+'</div><div class="muted">المحفظة خاصة بالسائقين.</div>';
+      renderHistory(mine, false);
+      return;
+    }
+    var due=getDue(cur.phone);
     var card=document.getElementById('walletCard');
     var warn = due>=THRESH ? '<div class="danger">وصلت الحد — يجب تسديد المستحقات ليبقى حسابك نشطاً ضمن 1 كم.</div>' : '<div class="muted">الحساب نشط — يظهر ضمن 1 كم حول طالبي الأجرة.</div>';
-    card.innerHTML = '<div>مرحباً <b>'+cur.name+'</b> — '+cur.phone+' ('+cur.vehicle.type+')</div>' +
-      '<div style="margin:10px 0;font-size:22px">الرصيد المستحق (عمولات نقدية متراكمة): <b>'+fmtSYP(due)+'</b></div>' +
+    var veh = cur.vehicle ? (cur.vehicle.type+' — '+cur.vehicle.model) : '';
+    card.innerHTML = '<div>مرحباً <b>'+cur.name+'</b> — '+cur.phone+' ('+veh+')</div>' +
+      '<div style="margin:10px 0;font-size:22px">الرصيد المستحق (محفظتك الخاصة): <b>'+fmtSYP(due)+'</b></div>' +
       warn +
-      '<div style="margin-top:12px"><button class="btn" onclick="payNow()">تسديد المستحقات (محاكاة)</button> <button class="btn" style="background:#333;color:#fff;margin-right:8px" onclick="clearWallet()">تصفير (للتجربة)</button></div>';
+      '<div style="margin-top:12px"><button class="btn" onclick="payNow()">تسديد المستحقات (محاكاة)</button> <button class="btn" style="background:#333;color:#fff;margin-right:8px" onclick="clearWallet()">تصفير (للتجربة)</button></div>' +
+      '<div class="muted" style="margin-top:8px">لا تُعرض بياناتك الخاصة للزبون إلا بعد قبولك الطلب. كل رحلة تظهر هنا مع أجرتها وعمولتها.</div>';
     var rides=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
+    var mine=rides.filter(function(r){
+      var dPhone = r.driver && r.driver.phone ? r.driver.phone : r.driver;
+      return dPhone===cur.phone || r.driver===cur.name;
+    });
+    renderHistory(mine, true);
+  }
+  function renderHistory(list, isDriver){
     var h=document.getElementById('history');
-    if (!rides.length) h.innerHTML='<div class="muted">لا توجد رحلات بعد. اطلب رحلة من index.html واختر نقدي لترى التراكم.</div>';
-    else {
-      var html='<table><tr><th>التاريخ</th><th>السائق</th><th>الدفع</th><th>الأجر</th><th>العمولة</th></tr>';
-      for (var i=rides.length-1;i>=0;i--){
-        var r=rides[i];
-        html+='<tr><td>'+new Date(r.at).toLocaleString('ar-SY')+'</td><td>'+r.driver+'</td><td>'+(r.pay==='cash'?'نقدي':'إلكتروني')+'</td><td>'+fmtSYP(r.fare)+'</td><td>'+fmtSYP(r.fee)+'</td></tr>';
+    if (!list.length){ h.innerHTML='<div class="muted">لا توجد رحلات مسجلة لهذا الحساب بعد.</div>'; return; }
+    var html='<table><tr><th>التاريخ</th><th>المسار</th><th>الراكب</th><th>الدفع</th><th>الأجر</th><th>العمولة</th><th>الصافي</th><th>الحالة</th><th>إجراء</th></tr>';
+    for (var i=list.length-1;i>=0;i--){
+      var r=list[i];
+      var idx=(JSON.parse(localStorage.getItem('ajrah_rides')||'[]')).indexOf(r);
+      // للعثور على الفهرس الحقيقي
+      var all=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
+      var realIdx=-1;
+      for (var k=0;k<all.length;k++) if (all[k].id===r.id) { realIdx=k; break; }
+      var statusMap={pending:'بانتظار قبولك', accepted:'مقبول — بانتظار الإتمام', cash_confirmed:'مكتمل نقداً', completed:'مكتمل إلكتروني'};
+      var status=statusMap[r.status]||r.status||'—';
+      var passenger = r.passenger ? (r.passenger.name+'<br><span style="font-size:12px">'+r.passenger.phone+'</span>') : '—';
+      var route = (r.from||'—')+' → '+(r.to||'—');
+      var net = r.net!=null ? r.net : (r.fare - r.fee);
+      var action='';
+      if (isDriver){
+        if (r.status==='pending') action='<button class="btn" style="padding:6px 10px;font-size:13px" onclick="acceptRide('+realIdx+')">قبول الطلب</button>';
+        else if (r.status==='accepted' && r.pay==='cash') action='<button class="btn" style="padding:6px 10px;font-size:13px" onclick="confirmCash('+realIdx+')">استلمت نقداً</button>';
+        else if (r.status==='accepted' && r.pay==='electronic') action='<button class="btn" style="padding:6px 10px;font-size:13px" onclick="completeElectronic('+realIdx+')">إتمام (إلكتروني)</button>';
+        else action='<span class="muted">—</span>';
       }
-      html+='</table>';
-      h.innerHTML=html;
+      html+='<tr><td>'+new Date(r.at).toLocaleString('ar-SY')+'</td><td>'+route+'</td><td>'+passenger+'</td><td>'+(r.pay==='cash'?'نقدي<br><span style="font-size:11px">يحدده العميل</span>':'إلكتروني')+'</td><td>'+fmtSYP(r.fare)+'</td><td>'+fmtSYP(r.fee)+'</td><td>'+fmtSYP(net)+'</td><td>'+status+'</td><td>'+action+'</td></tr>';
     }
+    html+='</table>';
+    h.innerHTML=html;
+  }
+  function acceptRide(idx){
+    var rides=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
+    var r=rides[idx];
+    if (!r || r.status!=='pending') return;
+    if (!confirm('قبول طلب الرحلة من '+r.passenger.name+'؟ سيظهر رقمك للراكب.')) return;
+    r.status='accepted';
+    localStorage.setItem('ajrah_rides', JSON.stringify(rides));
+    alert('تم القبول — تواصل مع الراكب على '+r.passenger.phone);
+    load();
+  }
+  function confirmCash(idx){
+    var rides=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
+    var r=rides[idx];
+    if (!r || r.status!=='accepted' || r.pay!=='cash') return;
+    if (!confirm('تأكيد استلام '+fmtSYP(r.fare)+' نقداً من الراكب؟ سيُضاف '+fmtSYP(r.fee)+' لعمولة محفظتك.')) return;
+    var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
+    var key=walletKey(cur.phone);
+    var due=parseInt(localStorage.getItem(key)||'0',10);
+    due+=r.fee;
+    localStorage.setItem(key, due);
+    r.status='cash_confirmed';
+    localStorage.setItem('ajrah_rides', JSON.stringify(rides));
+    alert('تم التأكيد — تراكمت العمولة. رصيدك الآن: '+fmtSYP(due));
+    load();
+  }
+  function completeElectronic(idx){
+    var rides=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
+    var r=rides[idx];
+    if (!r || r.status!=='accepted') return;
+    r.status='completed';
+    localStorage.setItem('ajrah_rides', JSON.stringify(rides));
+    alert('تم إتمام الرحلة إلكترونياً — خصمت العمولة تلقائياً.');
+    load();
   }
   function payNow(){
-    var due=parseInt(localStorage.getItem('ajrah_wallet_due')||'0',10);
+    var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
+    if (!cur) return;
+    var key=walletKey(cur.phone);
+    var due=parseInt(localStorage.getItem(key)||'0',10);
     if (!due) { alert('لا يوجد مستحقات'); return; }
     if (confirm('تأكيد تسديد '+fmtSYP(due)+' إلكترونياً؟ (محاكاة)')) {
-      localStorage.setItem('ajrah_wallet_due','0');
+      localStorage.setItem(key,'0');
       alert('تم التسديد — شكراً. حسابك نشط.');
       load();
     }
   }
-  function clearWallet(){ localStorage.setItem('ajrah_wallet_due','0'); load(); }
+  function clearWallet(){
+    var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
+    if (!cur) return;
+    localStorage.setItem(walletKey(cur.phone),'0');
+    load();
+  }
   load();
 </script>
 </body>
