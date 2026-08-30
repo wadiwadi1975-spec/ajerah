@@ -66,6 +66,11 @@
     color: #fff; line-height: 1.8;
   }
   .info b { color: #E8C45A; }
+  .driver-card { display: none; text-align: center; line-height: 1.9; }
+  .driver-card.active { display: block; }
+  .driver-card h3 { font-size: 20px; margin-bottom: 8px; }
+  .driver-card .phone { direction: ltr; font-weight: 800; color: #E8C45A; font-size: 20px; }
+  .driver-card .badge { display: inline-block; background: rgba(212,175,90,0.18); border: 1px solid rgba(212,175,90,0.4); padding: 4px 10px; border-radius: 20px; font-size: 14px; margin: 2px; }
 
   .cities { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 1vh; }
   .city {
@@ -86,36 +91,47 @@
     <div class="card">
       <div class="row">
         <div class="field">
-          <label>نقطة الانطلاق</label>
+          <label>نقطة الانطلاق (مكانك الحالي)</label>
           <input id="from" placeholder="مثال: درعا" value="درعا">
         </div>
         <div class="field">
           <label>الوجهة</label>
-          <input id="to" placeholder="مثال: دمشق" value="دمشق">
+          <input id="to" placeholder="مثال: مطار دمشق الدولي" value="مطار دمشق الدولي">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>نوع السيارة المطلوبة</label>
+          <select id="vehicle">
+            <option value="private">سيارة خاصة</option>
+            <option value="taxi" selected>تاكسي</option>
+            <option value="bus">حافلة (نقل عام)</option>
+            <option value="van">فان</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>العملة</label>
+          <select id="currency">
+            <option value="syp" selected>ل.س — الليرة السورية</option>
+            <option value="usd">$ — دولار أمريكي</option>
+          </select>
         </div>
       </div>
       <div class="field">
-        <label>نوع المركبة</label>
-        <select id="vehicle">
-          <option value="private">سيارة خاصة</option>
-          <option value="taxi" selected>تاكسي</option>
-          <option value="bus">حافلة (نقل عام)</option>
-          <option value="van">فان</option>
-        </select>
+        <label>رقم هاتفك (ليتواصل السائق معك)</label>
+        <input id="p_phone" placeholder="09xxxxxxxx">
       </div>
-      <div class="field">
-        <label>العملة</label>
-        <select id="currency">
-          <option value="syp" selected>ل.س — الليرة السورية</option>
-          <option value="usd">$ — دولار أمريكي</option>
-        </select>
-      </div>
-      <button class="btn" onclick="requestRide()">احسب الأجر</button>
+      <button class="btn" onclick="requestRide()">ابحث عن أقرب سيارة</button>
     </div>
 
     <div class="card">
       <div id="map" class="map-box"></div>
       <div id="info" class="info">الخريطة تُحمّل…</div>
+    </div>
+
+    <div class="card driver-card" id="driverCard">
+      <h3>أقرب سيارة إليك</h3>
+      <div id="driverInfo"></div>
     </div>
 
     <div class="card">
@@ -138,7 +154,7 @@
   <footer>نموذج أولي لمشروع «أُجْرَه» — سيتم تطويره لاحقاً.</footer>
 
   <script>
-    // إحداثيات تقريبية لبعض المدن السورية
+    // إحداثيات تقريبية لبعض المدن + مطار دمشق
     var CITIES = {
       "دمشق":  {lat:33.5138, lng:36.2765},
       "درعا":  {lat:32.6192, lng:36.1021},
@@ -153,27 +169,37 @@
       "القامشلي":{lat:37.0600, lng:42.0200},
       "طرطوس":{lat:34.8800, lng:35.8800},
       "السويداء":{lat:32.7100, lng:36.5600},
-      "القنيطرة":{lat:33.1200, lng:35.8300}
+      "القنيطرة":{lat:33.1200, lng:35.8300},
+      "مطار دمشق الدولي":{lat:33.4119, lng:36.5155},
+      "مطار دمشق":{lat:33.4119, lng:36.5155}
     };
-    // معاملات الأجر لكل نوع مركبة (أرقام توضيحية قابلة للتعديل حسب التسعيرة الرسمية)
-    // base: أجر البداية | perKm: لكل كم | perMin: لكل دقيقة | speed: سرعة الرحلة التقديرية كم/س
+    // معاملات الأجر لكل نوع مركبة
     var VEHICLES = {
       private: { name:"سيارة خاصة", base:2000, perKm:1500, perMin:200, speed:90 },
       taxi:    { name:"تاكسي",      base:1500, perKm:1200, perMin:150, speed:70 },
       bus:     { name:"حافلة (نقل عام)", base:500, perKm:400, perMin:50, speed:60 },
       van:     { name:"فان",        base:1000, perKm:800,  perMin:100, speed:75 }
     };
-    var ROAD_FACTOR = 1.3; // معامل تحويل المسافة الخطية إلى مسافة طرقية تقديرية
-    var RATE = 13000; // سعر صرف الدولار مقابل الليرة السورية (توضيحي — يُعدّل حسب السوق)
+    var ROAD_FACTOR = 1.3;
+    var RATE = 13000;
 
     function fmtSYP(n) { return Math.round(n).toLocaleString('ar-SY') + ' ل.س'; }
     function fmtUSD(n) { return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
-    var map = L.map('map').setView([34.0, 37.5], 7);
+    // سائقون تجريبيون يستخدمون التطبيق (بيانات أولية تجريبية)
+    var DRIVERS = [
+      { name:"سائق 1 — أبو عمر", phone:"0991234567", type:"taxi",    model:"كيا ريو 2021",     plate:"284513/درعا",   lat:32.625, lng:36.105, available:true },
+      { name:"سائق 2 — أبو خالد", phone:"0938765432", type:"private", model:"هيونداي أكسنت 2020", plate:"193211/دمشق",    lat:33.520, lng:36.280, available:true },
+      { name:"سائق 3 — محمد",     phone:"0945123789", type:"taxi",    model:"تويوتا كورولا 2019", plate:"445102/دمشق",    lat:33.510, lng:36.300, available:true },
+      { name:"سائق 4 — أبو أحمد", phone:"0969345678", type:"van",     model:"فان هيونداي H1",    plate:"772301/درعا",   lat:32.615, lng:36.130, available:true },
+      { name:"سائق 5 — سامر",     phone:"0987654321", type:"private", model:"كيا سيراتو 2022",    plate:"561902/دمشق",    lat:33.400, lng:36.510, available:true },
+      { name:"سائق 6 — أبو ليث",  phone:"0933344556", type:"bus",     model:"حافلة 14 راكب",     plate:"881420/دمشق",    lat:33.480, lng:36.250, available:true }
+    ];
+
+    var map = L.map('map').setView([33.2, 36.4], 8);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18, attribution: '© OpenStreetMap'
     }).addTo(map);
-
     var routeLayer = L.layerGroup().addTo(map);
 
     function haversine(a, b) {
@@ -185,49 +211,78 @@
       return 2*R*Math.asin(Math.sqrt(h));
     }
 
-    function drawRoute(from, to) {
+    function drawRoute(from, to, driver) {
       routeLayer.clearLayers();
       var A = CITIES[from], B = CITIES[to];
-      L.marker([A.lat, A.lng]).addTo(routeLayer).bindPopup('الانطلاق: ' + from);
+      L.marker([A.lat, A.lng]).addTo(routeLayer).bindPopup('نقطة الانطلاق: ' + from);
       L.marker([B.lat, B.lng]).addTo(routeLayer).bindPopup('الوجهة: ' + to);
       L.polyline([[A.lat,A.lng],[B.lat,B.lng]], {color:'#E8C45A', weight:4}).addTo(routeLayer);
-      map.fitBounds([[A.lat,A.lng],[B.lat,B.lng]], {padding:[40,40]});
+      if (driver) {
+        var dIcon = L.divIcon({ html:'🚕', className:'', iconSize:[24,24] });
+        L.marker([driver.lat, driver.lng], {icon:dIcon}).addTo(routeLayer).bindPopup('السائق: ' + driver.name);
+        L.polyline([[driver.lat, driver.lng],[A.lat, A.lng]], {color:'#7ec8ff', weight:2, dashArray:'6 6'}).addTo(routeLayer);
+        map.fitBounds([[A.lat,A.lng],[B.lat,B.lng],[driver.lat,driver.lng]], {padding:[40,40]});
+      } else {
+        map.fitBounds([[A.lat,A.lng],[B.lat,B.lng]], {padding:[40,40]});
+      }
+    }
+
+    function findNearestDriver(originCoords, requestedType) {
+      var best = null, bestDist = Infinity;
+      for (var i=0;i<DRIVERS.length;i++){
+        var d = DRIVERS[i];
+        if (!d.available) continue;
+        if (d.type !== requestedType) continue;
+        var dist = haversine(originCoords, {lat:d.lat, lng:d.lng});
+        if (dist < bestDist) { bestDist = dist; best = d; best._dist = dist; }
+      }
+      return best;
     }
 
     function requestRide() {
       var from = document.getElementById('from').value.trim();
       var to = document.getElementById('to').value.trim();
+      var reqType = document.getElementById('vehicle').value;
+      var cur = document.getElementById('currency').value;
       if (!from || !to) { alert('الرجاء إدخال نقطة الانطلاق والوجهة'); return; }
       if (!CITIES[from] || !CITIES[to]) {
-        document.getElementById('info').innerHTML = 'المدينة غير موجودة بعد. المتاح: ' + Object.keys(CITIES).join('، ');
+        document.getElementById('info').innerHTML = 'المكان غير موجود بعد. المتاح: ' + Object.keys(CITIES).join('، ');
         return;
       }
-      var v = VEHICLES[document.getElementById('vehicle').value];
-      var cur = document.getElementById('currency').value;
+      var v = VEHICLES[reqType];
       var lineDist = haversine(CITIES[from], CITIES[to]);
       var roadDist = lineDist * ROAD_FACTOR;
       var timeMin = roadDist / v.speed * 60;
       var fareSYP = Math.round(v.base + v.perKm * roadDist + v.perMin * timeMin);
-      drawRoute(from, to);
+
+      var driver = findNearestDriver(CITIES[from], reqType);
+      drawRoute(from, to, driver);
 
       var main, sub;
-      if (cur === 'usd') {
-        main = fmtUSD(fareSYP / RATE);
-        sub = '≈ ' + fmtSYP(fareSYP);
-      } else {
-        main = fmtSYP(fareSYP);
-        sub = '≈ ' + fmtUSD(fareSYP / RATE);
-      }
+      if (cur === 'usd') { main = fmtUSD(fareSYP / RATE); sub = '≈ ' + fmtSYP(fareSYP); }
+      else { main = fmtSYP(fareSYP); sub = '≈ ' + fmtUSD(fareSYP / RATE); }
 
       document.getElementById('info').innerHTML =
         'الخط: <b>' + from + ' ←→ ' + to + '</b> — <b>' + v.name + '</b><br>' +
-        'المسافة التقديرية على الطريق: <b>' + roadDist.toFixed(1) + ' كم</b><br>' +
-        'الوقت التقديري: <b>' + Math.round(timeMin) + ' دقيقة</b><br>' +
-        'الأجر المتوقع: <b>' + main + '</b><br>' +
-        '<span style="font-size:14px;opacity:.8">' + sub + ' &nbsp;|&nbsp; 1$ = ' + RATE.toLocaleString('ar-SY') + ' ل.س</span>';
+        'المسافة التقديرية: <b>' + roadDist.toFixed(1) + ' كم</b> — الوقت: <b>' + Math.round(timeMin) + ' دقيقة</b><br>' +
+        'الأجر المتوقع: <b>' + main + '</b> <span style="font-size:14px;opacity:.8">(' + sub + ' | 1$ = ' + RATE.toLocaleString('ar-SY') + ' ل.س)</span>';
+
+      var card = document.getElementById('driverCard');
+      var box = document.getElementById('driverInfo');
+      if (!driver) {
+        card.classList.add('active');
+        box.innerHTML = 'لا توجد سيارة متاحة من نوع <b>' + v.name + '</b> قرب <b>' + from + '</b> حالياً. جرّب نوعاً آخر.';
+      } else {
+        card.classList.add('active');
+        box.innerHTML =
+          '<span class="badge">' + v.name + '</span> <span class="badge">' + driver.model + '</span> <span class="badge">' + driver.plate + '</span><br>' +
+          '<div style="margin:8px 0">' + driver.name + ' — يبعد <b>' + driver._dist.toFixed(1) + ' كم</b> عن نقطة الانطلاق</div>' +
+          '<div>رقم السائق: <a class="phone" href="tel:' + driver.phone + '">' + driver.phone + '</a></div>' +
+          '<div style="margin-top:6px; font-size:14px; opacity:.85">سيتواصل معك السائق بعد تأكيد الطلب</div>';
+      }
     }
 
-    // رسم الخط الافتراضي درعا ↔ دمشق عند التحميل
+    // افتراضي: درعا → مطار دمشق
     requestRide();
   </script>
 </body>
