@@ -484,10 +484,6 @@
           localStorage.setItem('ajrah_current', JSON.stringify(dummy));
           cur=dummy;
         }catch(e){}
-      } else if (cur.role!=='driver'){
-        // تحويل جلسة التطوير الحالية إلى سائق مؤقتاً حسب طلبك
-        var d2={id:998,name:"سائق تجريبي",phone:"0980001111",pass:"123456",role:"driver", vehicle:{type:"taxi", model:"كيا ريو 2021", year:2021, plate:"123456/دمشق"}, createdAt:new Date().toISOString()};
-        try{ localStorage.setItem('ajrah_current', JSON.stringify(d2)); cur=d2; }catch(e){}
       }
       var ov=document.getElementById('welcomeOverlay');
       if (cur) {
