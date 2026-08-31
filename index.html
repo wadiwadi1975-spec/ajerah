@@ -175,8 +175,12 @@
     <div class="card" id="paymentCard" style="display:none; text-align:center">
       <h3>إتمام الدفع الإلكتروني</h3>
       <div id="paymentInfo" style="margin:12px 0; line-height:1.8"></div>
-      <button class="btn" onclick="confirmPayment()">تأكيد إتمام التحويل</button>
-      <div style="font-size:12px;opacity:.7;margin-top:8px">محاكاة — في النسخة النهائية سيتم الربط بواجهة التطبيق الرسمية</div>
+      <div style="text-align:right; margin:12px 0">
+        <div class="field"><label>رقم حسابك في <span id="payMethodName"></span></label><input id="payAccount" placeholder="09xxxxxxxx أو رقم الحساب"></div>
+        <div class="field"><label>كلمة السر / رمز PIN</label><input id="payPass" type="password" placeholder="••••"></div>
+      </div>
+      <button class="btn" onclick="confirmPayment()">تأكيد الدفع</button>
+      <div style="font-size:12px;opacity:.7;margin-top:8px">محاكاة — في النسخة النهائية يتم التحويل عبر واجهة مزود الدفع الرسمية بتشفير كامل</div>
     </div>
 
     <div class="card">
@@ -449,6 +453,7 @@
         };
         var acc = accountMap[payMethod]||payLabel(payMethod);
         payInfo.innerHTML = 'طريقة الدفع: <b>'+payLabel(payMethod)+'</b><br>المبلغ المطلوب: <b>'+curDisp+'</b><br>رقم الرحلة: <b>#'+ride.id+'</b><br><br>حوّل المبلغ إلى:<br><b>'+acc+'</b><br><span style="font-size:13px;opacity:.8">اكتب رقم الرحلة في ملاحظات التحويل</span>';
+        document.getElementById('payMethodName').textContent = payLabel(payMethod);
         payCard.style.display='block';
         payCard.scrollIntoView({behavior:'smooth'});
         alert('تم حجز السيارة. الآن أكمل الدفع عبر '+payLabel(payMethod)+' — المبلغ '+curDisp+' — ثم اضغط "تأكيد إتمام التحويل" أدناه.');
@@ -461,13 +466,19 @@
       var r=rides.find(function(x){return x.id===id});
       if (!r){ alert('الرحلة غير موجودة'); return; }
       if (r.pay==='cash'){ alert('الدفع نقدي — لا حاجة لتأكيد إلكتروني'); return; }
+      var acc=document.getElementById('payAccount').value.trim();
+      var pin=document.getElementById('payPass').value.trim();
+      if (!acc || acc.replace(/\D/g,'').length<7){ alert('أدخل رقم حسابك في '+payLabel(r.pay)+' بشكل صحيح'); return; }
+      if (!pin || pin.length<4){ alert('أدخل كلمة السر / PIN الخاصة بـ '+payLabel(r.pay)); return; }
+      // محاكاة تحقق مع مزود الدفع (شام كاش/سيريتل/MTN/البنك)
       r.paymentStatus='paid';
+      r.payerAccount=acc;
       if (r.status==='pending') r.status='accepted';
       localStorage.setItem('ajrah_rides', JSON.stringify(rides));
       addPlatform(r.fee);
       document.getElementById('paymentCard').style.display='none';
       var curDisp2 = document.getElementById('currency').value==='usd' ? fmtUSD(r.fare/RATE) : fmtSYP(r.fare);
-      alert('تم تأكيد الدفع عبر '+payLabel(r.pay)+' — المبلغ '+curDisp2+' — حُجزت '+fmtSYP(r.fee)+' كعمولة لحساب أُجْرَه، وسيُحول الصافي للسائق.');
+      alert('تم التحقق من حسابك ('+acc+') عبر '+payLabel(r.pay)+' وتأكيد الدفع — المبلغ '+curDisp2+' — حُجزت '+fmtSYP(r.fee)+' كعمولة لحساب أُجْرَه، وسيُحول الصافي للسائق.');
     }
 
     // شريط التسجيل + ترحيب أول مرة — حساب وهمي مؤقت للتطوير
