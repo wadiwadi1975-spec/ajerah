@@ -46,6 +46,9 @@
   var THRESH=200000;
   function walletKey(phone){ return 'ajrah_wallet_'+phone; }
   function getDue(phone){ return parseInt(localStorage.getItem(walletKey(phone))||'0',10); }
+  function getPlatform(){ return parseInt(localStorage.getItem('ajrah_platform')||'0',10); }
+  function walletKey(phone){ return 'ajrah_wallet_'+phone; }
+  function getDue(phone){ return parseInt(localStorage.getItem(walletKey(phone))||'0',10); }
   function load(){
     var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
     if (!cur) { document.getElementById('walletCard').innerHTML='يجب تسجيل دخول كـ سائق أولاً. <a href="auth.html">تسجيل</a>'; return; }
@@ -58,14 +61,16 @@
       return;
     }
     var due=getDue(cur.phone);
+    var platform=getPlatform();
     var card=document.getElementById('walletCard');
     var warn = due>=THRESH ? '<div class="danger">وصلت الحد — يجب تسديد المستحقات ليبقى حسابك نشطاً ضمن 1 كم.</div>' : '<div class="muted">الحساب نشط — يظهر ضمن 1 كم حول طالبي الأجرة.</div>';
     var veh = cur.vehicle ? (cur.vehicle.type+' — '+cur.vehicle.model) : '';
     card.innerHTML = '<div>مرحباً <b>'+cur.name+'</b> — '+cur.phone+' ('+veh+')</div>' +
-      '<div style="margin:10px 0;font-size:22px">الرصيد المستحق (محفظتك الخاصة): <b>'+fmtSYP(due)+'</b></div>' +
+      '<div style="margin:10px 0;font-size:18px">محفظتك (عمولات نقدية متراكمة): <b>'+fmtSYP(due)+'</b></div>' +
+      '<div style="margin:6px 0;font-size:16px;color:#7ec8ff">حساب أُجْرَه (إجمالي العمولات المحصلة): <b>'+fmtSYP(platform)+'</b> <span style="font-size:12px;opacity:.7">— localStorage: ajrah_platform</span></div>' +
       warn +
-      '<div style="margin-top:12px"><button class="btn" onclick="payNow()">تسديد المستحقات (محاكاة)</button> <button class="btn" style="background:#333;color:#fff;margin-right:8px" onclick="clearWallet()">تصفير (للتجربة)</button></div>' +
-      '<div class="muted" style="margin-top:8px">لا تُعرض بياناتك الخاصة للزبون إلا بعد قبولك الطلب. كل رحلة تظهر هنا مع أجرتها وعمولتها.</div>';
+      '<div style="margin-top:12px"><button class="btn" onclick="payNow()">تسديد مستحقاتك لحساب أُجْرَه (محاكاة)</button> <button class="btn" style="background:#333;color:#fff;margin-right:8px" onclick="clearWallet()">تصفير (للتجربة)</button></div>' +
+      '<div class="muted" style="margin-top:8px">محفظة السائق: <code>localStorage: '+walletKey(cur.phone)+'</code> — حساب أُجْرَه: <code>ajrah_platform</code> — لا تُعرض بياناتك الخاصة للزبون إلا بعد قبولك الطلب.</div>';
     var rides=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
     var mine=rides.filter(function(r){
       var dPhone = r.driver && r.driver.phone ? r.driver.phone : r.driver;
@@ -123,7 +128,7 @@
     localStorage.setItem(key, due);
     r.status='cash_confirmed';
     localStorage.setItem('ajrah_rides', JSON.stringify(rides));
-    alert('تم التأكيد — تراكمت العمولة. رصيدك الآن: '+fmtSYP(due));
+    alert('تم التأكيد — تراكمت العمولة في محفظتك. رصيدك الآن: '+fmtSYP(due)+' — سيُحول لحساب أُجْرَه عند التسديد.');
     load();
   }
   function completeElectronic(idx){
@@ -141,9 +146,11 @@
     var key=walletKey(cur.phone);
     var due=parseInt(localStorage.getItem(key)||'0',10);
     if (!due) { alert('لا يوجد مستحقات'); return; }
-    if (confirm('تأكيد تسديد '+fmtSYP(due)+' إلكترونياً؟ (محاكاة)')) {
+    if (confirm('تأكيد تسديد '+fmtSYP(due)+' لحساب أُجْرَه إلكترونياً؟ (محاكاة)')) {
       localStorage.setItem(key,'0');
-      alert('تم التسديد — شكراً. حسابك نشط.');
+      var plat=parseInt(localStorage.getItem('ajrah_platform')||'0',10);
+      localStorage.setItem('ajrah_platform', plat+due);
+      alert('تم التسديد — انتقل '+fmtSYP(due)+' إلى حساب أُجْرَه. رصيد المنصة الآن: '+fmtSYP(plat+due));
       load();
     }
   }

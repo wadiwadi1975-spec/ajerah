@@ -238,6 +238,8 @@
     function addWalletDueFor(phone, amount){ var cur=getWalletDueFor(phone)+amount; localStorage.setItem(walletKey(phone), cur); return cur; }
     function getWalletDue(){ var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){} if(!cur||cur.role!=='driver') return 0; return getWalletDueFor(cur.phone); }
     function addWalletDue(amount){ var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){} if(!cur||cur.role!=='driver') return 0; return addWalletDueFor(cur.phone, amount); }
+    function getPlatform(){ return parseInt(localStorage.getItem('ajrah_platform')||'0',10); }
+    function addPlatform(amount){ var cur=getPlatform()+amount; localStorage.setItem('ajrah_platform', cur); return cur; }
 
     var RADIUS_KM = 1; // نطاق البحث حول الراكب (كم)
     // سائقون تجريبيون يستخدمون التطبيق (بيانات أولية تجريبية — جميعهم ضمن 1 كم من مراكز المدن للعرض التجريبي)
@@ -462,9 +464,10 @@
       r.paymentStatus='paid';
       if (r.status==='pending') r.status='accepted';
       localStorage.setItem('ajrah_rides', JSON.stringify(rides));
+      addPlatform(r.fee);
       document.getElementById('paymentCard').style.display='none';
       var curDisp2 = document.getElementById('currency').value==='usd' ? fmtUSD(r.fare/RATE) : fmtSYP(r.fare);
-      alert('تم تأكيد الدفع عبر '+payLabel(r.pay)+' — المبلغ '+curDisp2+' — سيُحول الصافي للسائق بعد خصم العمولة تلقائياً.');
+      alert('تم تأكيد الدفع عبر '+payLabel(r.pay)+' — المبلغ '+curDisp2+' — حُجزت '+fmtSYP(r.fee)+' كعمولة لحساب أُجْرَه، وسيُحول الصافي للسائق.');
     }
 
     // شريط التسجيل + ترحيب أول مرة — حساب وهمي مؤقت للتطوير
