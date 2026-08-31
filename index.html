@@ -100,7 +100,11 @@
     <div style="background:#111;border:1px solid #E8C45A;border-radius:18px;padding:4vh 5vw;max-width:480px;width:100%;text-align:center">
       <img src="images/logo.png" style="width:90px;height:90px;object-fit:contain;margin-bottom:10px">
       <h2 style="color:#E8C45A">مرحباً بك في أُجْرَه</h2>
-      <p style="color:#c9d8cf;font-size:14px;margin:10px 0">سجّل الآن لتتمكن من طلب سيارة إلى مطار دمشق أو أي وجهة، مع تحديد أقرب سيارة حولك ضمن 1 كم.</p>
+      <p style="color:#c9d8cf;font-size:14px;margin:10px 0">بنوصلك وين ما بدك — من موقعك الدقيق إلى مطار دمشق وأي مدينة ضمن 1 كم حولك.</p>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0;font-size:12px">
+        <span class="badge">📍 حدد موقعك</span><span class="badge">🚕 اختر سيارة قريبة مع صورتها وهويتها</span><span class="badge">💳 ادفع نقداً أو عبر شام كاش</span>
+      </div>
+      <p style="color:#9fb3a8;font-size:12px">سجّل كراكب لطلب سيارة بأمان، أو كسائق لاستقبال الطلبات وإدارة محفظتك وصندوق الأمانات.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
         <a href="auth.html?role=passenger" style="flex:1;padding:12px;border-radius:12px;background:linear-gradient(135deg,#E8C45A 0%,#c79a2e 100%);color:#000;text-decoration:none;font-weight:800">سجّل كراكب</a>
         <a href="auth.html?role=driver" style="flex:1;padding:12px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid #E8C45A;color:#E8C45A;text-decoration:none;font-weight:800">سجّل كسائق</a>
@@ -114,7 +118,7 @@
   </div>
 
   <div class="container">
-    <div class="card">
+    <div class="card" id="passengerCard">
       <div class="row">
         <div class="field">
           <label>نقطة الانطلاق (مكانك الحالي)</label>
@@ -160,6 +164,16 @@
         <input id="p_phone" placeholder="أي رقم هاتف">
       </div>
       <button class="btn" onclick="requestRide()">ابحث عن أقرب سيارة</button>
+    </div>
+
+    <div class="card" id="driverHome" style="display:none; text-align:center">
+      <h3>لوحة السائق</h3>
+      <div id="driverHomeInfo" style="margin:10px 0; line-height:1.8"></div>
+      <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap">
+        <a href="wallet.html" class="btn" style="text-decoration:none; display:inline-block; padding:10px 18px; font-size:14px">فتح المحفظة</a>
+        <a href="lost.html" class="btn" style="text-decoration:none; display:inline-block; padding:10px 18px; font-size:14px; background:rgba(255,255,255,0.06); border:1px solid #E8C45A; color:#E8C45A">صندوق الأمانات</a>
+      </div>
+      <div class="muted" style="margin-top:10px; font-size:12px">الطلبات القادمة ضمن 1 كم تظهر في محفظتك — اقبلها ليظهر رقمك للراكب</div>
     </div>
 
     <div class="card">
@@ -522,6 +536,15 @@
       } else {
         bar.innerHTML='<a href="auth.html" style="display:inline-block;padding:8px 14px;border-radius:20px;background:rgba(212,175,90,0.15);border:1px solid rgba(212,175,90,0.4);color:#E8C45A;text-decoration:none">سجّل / ادخل — التسجيل مطلوب لطلب الرحلة</a>';
         if (ov) ov.style.display='flex';
+      }
+      var passengerCard=document.getElementById('passengerCard');
+      var driverHome=document.getElementById('driverHome');
+      if (cur && cur.role==='driver'){
+        if (passengerCard) passengerCard.style.display='none';
+        if (driverHome){ driverHome.style.display='block'; var dh=document.getElementById('driverHomeInfo'); if(dh) dh.innerHTML='مركبتك: '+cur.vehicle.model+' — '+cur.vehicle.plate+'<br>محفظتك: '+fmtSYP(getWalletDue())+' — حساب أُجْرَه: '+fmtSYP(getPlatform()); }
+      } else {
+        if (passengerCard) passengerCard.style.display='block';
+        if (driverHome) driverHome.style.display='none';
       }
     })();
 
