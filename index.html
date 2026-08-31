@@ -172,6 +172,13 @@
       <div id="driverInfo"></div>
     </div>
 
+    <div class="card" id="paymentCard" style="display:none; text-align:center">
+      <h3>إتمام الدفع الإلكتروني</h3>
+      <div id="paymentInfo" style="margin:12px 0; line-height:1.8"></div>
+      <button class="btn" onclick="confirmPayment()">تأكيد إتمام التحويل</button>
+      <div style="font-size:12px;opacity:.7;margin-top:8px">محاكاة — في النسخة النهائية سيتم الربط بواجهة التطبيق الرسمية</div>
+    </div>
+
     <div class="card">
       <div class="cities">
         <span class="city">دمشق</span><span class="city">درعا</span>
@@ -418,18 +425,46 @@
         driver: {name:d.name, phone:d.phone, type:d.type, model:d.model, plate:d.plate},
         from: fromLabel, to: toLabel,
         fare: fareSYP, fee: feeSYP, net: netSYP,
-        pay: payMethod, status: 'pending'
+        pay: payMethod, status: 'pending', paymentStatus: payMethod==='cash' ? 'cash_on_arrival' : 'unpaid'
       };
       var rides=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
       rides.push(ride);
       localStorage.setItem('ajrah_rides', JSON.stringify(rides));
       // للعميل: لا تُظهر تفاصيل العمولة
       var curDisp = document.getElementById('currency').value==='usd' ? fmtUSD(fareSYP/RATE) : fmtSYP(fareSYP);
+      window._lastRideId = ride.id;
+      var payCard=document.getElementById('paymentCard');
+      var payInfo=document.getElementById('paymentInfo');
       if (payMethod==='cash'){
-        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: '+payLabel(payMethod)+'.\nالأجر الإجمالي: '+curDisp+'\nسيؤكد السائق الطلب، ثم يظهر رقمه لك.');
+        payCard.style.display='none';
+        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: '+payLabel(payMethod)+'.\nالأجر الإجمالي: '+curDisp+'\nادفع نقداً للسائق عند الوصول. سيؤكد السائق استلامه لاحقاً.');
       } else {
-        alert('تم إرسال طلبك إلى '+d.name+' ('+v.name+').\nطريقة الدفع: '+payLabel(payMethod)+'.\nالأجر الإجمالي: '+curDisp);
+        var accountMap={
+          shamcash: 'شام كاش — حساب أُجْرَه: 0990 123 456',
+          syriatel: 'سيريتل كاش — *123*... (حساب 0933 000 111)',
+          mtn: 'MTN كاش — *123*... (حساب 0944 000 222)',
+          bank: 'تحويل بنكي — IBAN: SY00 1234 5678 9012'
+        };
+        var acc = accountMap[payMethod]||payLabel(payMethod);
+        payInfo.innerHTML = 'طريقة الدفع: <b>'+payLabel(payMethod)+'</b><br>المبلغ المطلوب: <b>'+curDisp+'</b><br>رقم الرحلة: <b>#'+ride.id+'</b><br><br>حوّل المبلغ إلى:<br><b>'+acc+'</b><br><span style="font-size:13px;opacity:.8">اكتب رقم الرحلة في ملاحظات التحويل</span>';
+        payCard.style.display='block';
+        payCard.scrollIntoView({behavior:'smooth'});
+        alert('تم حجز السيارة. الآن أكمل الدفع عبر '+payLabel(payMethod)+' — المبلغ '+curDisp+' — ثم اضغط "تأكيد إتمام التحويل" أدناه.');
       }
+    }
+    function confirmPayment(){
+      var id=window._lastRideId;
+      if (!id){ alert('لا يوجد حجز معلق'); return; }
+      var rides=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
+      var r=rides.find(function(x){return x.id===id});
+      if (!r){ alert('الرحلة غير موجودة'); return; }
+      if (r.pay==='cash'){ alert('الدفع نقدي — لا حاجة لتأكيد إلكتروني'); return; }
+      r.paymentStatus='paid';
+      if (r.status==='pending') r.status='accepted';
+      localStorage.setItem('ajrah_rides', JSON.stringify(rides));
+      document.getElementById('paymentCard').style.display='none';
+      var curDisp2 = document.getElementById('currency').value==='usd' ? fmtUSD(r.fare/RATE) : fmtSYP(r.fare);
+      alert('تم تأكيد الدفع عبر '+payLabel(r.pay)+' — المبلغ '+curDisp2+' — سيُحول الصافي للسائق بعد خصم العمولة تلقائياً.');
     }
 
     // شريط التسجيل + ترحيب أول مرة — حساب وهمي مؤقت للتطوير
