@@ -1,5 +1,5 @@
-const CACHE='ajrah-v1';
-const ASSETS=['index.html','auth.html','register.html','manifest.json','images/logo.png','images/icon-192.png','images/icon-512.png'];
+const CACHE='ajrah-v2';
+const ASSETS=['index.html','auth.html','register.html','lost.html','wallet.html','manifest.json','images/logo.png','images/icon-192.png','images/icon-512.png'];
 self.addEventListener('install', e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
 });
