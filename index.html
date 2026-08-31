@@ -355,7 +355,7 @@
 
     function requestRide() {
       var curUser=null; try{curUser=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
-      if (!curUser) { if (!confirm('يجب التسجيل/الدخول أولاً لطلب سيارة. الانتقال لصفحة التسجيل؟')) return; location.href='auth.html'; return; }
+      if (!curUser) { location.href='auth.html'; return; }
       var from = document.getElementById('from').value.trim();
       var to = document.getElementById('to').value.trim();
       var cur = document.getElementById('currency').value;
@@ -550,8 +550,8 @@
     })();
 
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
-    // افتراضي: درعا → مطار دمشق
-    requestRide();
+    // عرض مسار افتراضي فقط إذا مسجل — وإلا يبقى الترحيب دون رسالة
+    try{ var _c=JSON.parse(localStorage.getItem('ajrah_current')||'null'); if(_c) requestRide(); }catch(e){}
   </script>
 </body>
 </html>
