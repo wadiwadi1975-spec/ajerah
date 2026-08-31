@@ -82,17 +82,27 @@
   function renderHistory(list, isDriver){
     var h=document.getElementById('history');
     if (!list.length){ h.innerHTML='<div class="muted">لا توجد رحلات مسجلة لهذا الحساب بعد.</div>'; return; }
-    var html='<table><tr><th>التاريخ</th><th>المسار</th><th>الراكب</th><th>الدفع</th><th>الأجر</th><th>العمولة</th><th>الصافي</th><th>الحالة</th><th>إجراء</th></tr>';
+    var col3 = isDriver ? 'الراكب' : 'السائق (للأمان)';
+    var html='<table><tr><th>التاريخ</th><th>المسار</th><th>'+col3+'</th><th>الدفع</th><th>الأجر</th><th>العمولة</th><th>الصافي</th><th>الحالة</th><th>إجراء</th></tr>';
     for (var i=list.length-1;i>=0;i--){
       var r=list[i];
       var idx=(JSON.parse(localStorage.getItem('ajrah_rides')||'[]')).indexOf(r);
-      // للعثور على الفهرس الحقيقي
       var all=JSON.parse(localStorage.getItem('ajrah_rides')||'[]');
       var realIdx=-1;
       for (var k=0;k<all.length;k++) if (all[k].id===r.id) { realIdx=k; break; }
-      var statusMap={pending:'بانتظار قبولك', accepted:'مقبول — بانتظار الإتمام', cash_confirmed:'مكتمل نقداً', completed:'مكتمل إلكتروني'};
+      var statusMap={pending: isDriver?'بانتظار قبولك':'بانتظار قبول السائق', accepted:'مقبول — بانتظار الإتمام', cash_confirmed:'مكتمل نقداً', completed:'مكتمل إلكتروني'};
       var status=statusMap[r.status]||r.status||'—';
-      var passenger = r.passenger ? (r.passenger.name+'<br><span style="font-size:12px">'+r.passenger.phone+'</span>') : '—';
+      var party;
+      if (isDriver){
+        party = r.passenger ? (r.passenger.name+'<br><span style="font-size:12px">'+r.passenger.phone+'</span>') : '—';
+      } else {
+        var d=r.driver;
+        var dName = d && d.name ? d.name : r.driver;
+        var dPhone = d && d.phone ? d.phone : '—';
+        var dId = d && d.idNumber ? d.idNumber : '—';
+        var dPhoto = d && d.photo ? '<br><img src="'+d.photo+'" style="width:36px;height:36px;border-radius:50%;border:1px solid #E8C45A" onerror="this.style.display=\'none\'">' : '';
+        party = dName+'<br><span style="font-size:12px">'+dPhone+' — ID:'+dId+'</span>'+dPhoto+'<br><span style="font-size:11px;opacity:.6">احتفظ بلقطة شاشة</span>';
+      }
       var route = (r.from||'—')+' → '+(r.to||'—');
       var net = r.net!=null ? r.net : (r.fare - r.fee);
       var action='';
@@ -102,7 +112,7 @@
         else if (r.status==='accepted' && r.pay==='electronic') action='<button class="btn" style="padding:6px 10px;font-size:13px" onclick="completeElectronic('+realIdx+')">إتمام (إلكتروني)</button>';
         else action='<span class="muted">—</span>';
       }
-      html+='<tr><td>'+new Date(r.at).toLocaleString('ar-SY')+'</td><td>'+route+'</td><td>'+passenger+'</td><td>'+payLabel(r.pay)+'</td><td>'+fmtSYP(r.fare)+'</td><td>'+fmtSYP(r.fee)+'</td><td>'+fmtSYP(net)+'</td><td>'+status+'</td><td>'+action+'</td></tr>';
+      html+='<tr><td>'+new Date(r.at).toLocaleString('ar-SY')+'</td><td>'+route+'</td><td>'+party+'</td><td>'+payLabel(r.pay)+'</td><td>'+fmtSYP(r.fare)+'</td><td>'+fmtSYP(r.fee)+'</td><td>'+fmtSYP(net)+'</td><td>'+status+'</td><td>'+action+'</td></tr>';
     }
     html+='</table>';
     h.innerHTML=html;
