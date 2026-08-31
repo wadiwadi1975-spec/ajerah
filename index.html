@@ -504,12 +504,12 @@
       var bar=document.getElementById('authBar');
       var cur=null; try{cur=JSON.parse(localStorage.getItem('ajrah_current')||'null')}catch(e){}
       if (!cur){
-        var dummy={id:998,name:"سائق تجريبي",phone:"0980001111",pass:"123456",role:"driver", vehicle:{type:"taxi", model:"كيا ريو 2021", year:2021, plate:"123456/دمشق"}, createdAt:new Date().toISOString()};
+        var dummy={id:999,name:"مستخدم تجريبي",phone:"0990000000",pass:"123456",role:"passenger",createdAt:new Date().toISOString()};
         try{
           var users=JSON.parse(localStorage.getItem('ajrah_users')||'[]');
           if (!users.find(function(u){return u.phone===dummy.phone})){ users.push(dummy); localStorage.setItem('ajrah_users', JSON.stringify(users)); }
-          var pDummy={id:999,name:"مستخدم تجريبي",phone:"0990000000",pass:"123456",role:"passenger",createdAt:new Date().toISOString()};
-          if (!users.find(function(u){return u.phone===pDummy.phone})){ users.push(pDummy); localStorage.setItem('ajrah_users', JSON.stringify(users)); }
+          var dDummy={id:998,name:"سائق تجريبي",phone:"0980001111",pass:"123456",role:"driver", vehicle:{type:"taxi", model:"كيا ريو 2021", year:2021, plate:"123456/دمشق"}, createdAt:new Date().toISOString()};
+          if (!users.find(function(u){return u.phone===dDummy.phone})){ users.push(dDummy); localStorage.setItem('ajrah_users', JSON.stringify(users)); }
           localStorage.setItem('ajrah_current', JSON.stringify(dummy));
           cur=dummy;
         }catch(e){}
