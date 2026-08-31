@@ -47,6 +47,7 @@
   function walletKey(phone){ return 'ajrah_wallet_'+phone; }
   function getDue(phone){ return parseInt(localStorage.getItem(walletKey(phone))||'0',10); }
   function getPlatform(){ return parseInt(localStorage.getItem('ajrah_platform')||'0',10); }
+  function mockSMS(phone,text){ try{ var l=JSON.parse(localStorage.getItem('ajrah_sms')||'[]'); l.push({to:phone,text:text,at:new Date().toISOString()}); localStorage.setItem('ajrah_sms', JSON.stringify(l)); }catch(e){} console.log('SMS to '+phone+': '+text); }
   function walletKey(phone){ return 'ajrah_wallet_'+phone; }
   function getDue(phone){ return parseInt(localStorage.getItem(walletKey(phone))||'0',10); }
   function load(){
@@ -113,7 +114,9 @@
     if (!confirm('قبول طلب الرحلة من '+r.passenger.name+'؟ سيظهر رقمك للراكب.')) return;
     r.status='accepted';
     localStorage.setItem('ajrah_rides', JSON.stringify(rides));
-    alert('تم القبول — تواصل مع الراكب على '+r.passenger.phone);
+    mockSMS(r.passenger.phone, 'أُجْرَه: قبل السائق '+r.driver.name+' طلبك #'+r.id+' ('+r.from+' → '+r.to+') — رقمه '+r.driver.phone);
+    mockSMS(r.driver.phone, 'أُجْرَه: قبلت طلب الراكب '+r.passenger.name+' ('+r.passenger.phone+') #'+r.id);
+    alert('تم القبول — أُرسلت رسالة نصية للراكب ('+r.passenger.phone+') وللسائق.\nتواصل مع الراكب على '+r.passenger.phone);
     load();
   }
   function confirmCash(idx){
@@ -128,7 +131,9 @@
     localStorage.setItem(key, due);
     r.status='cash_confirmed';
     localStorage.setItem('ajrah_rides', JSON.stringify(rides));
-    alert('تم التأكيد — تراكمت العمولة في محفظتك. رصيدك الآن: '+fmtSYP(due)+' — سيُحول لحساب أُجْرَه عند التسديد.');
+    mockSMS(r.passenger.phone, 'أُجْرَه: أكد السائق '+r.driver.name+' استلام '+fmtSYP(r.fare)+' نقداً للرحلة #'+r.id+' — شكراً لاستخدامك أُجْرَه.');
+    mockSMS(r.driver.phone, 'أُجْرَه: تم تسجيل استلامك نقداً للرحلة #'+r.id+' — أُضيف '+fmtSYP(r.fee)+' إلى محفظتك. الرصيد: '+fmtSYP(due));
+    alert('تم التأكيد — تراكمت العمولة في محفظتك. رصيدك الآن: '+fmtSYP(due)+' — أُرسلت رسالة نصية للعميل والسائق.');
     load();
   }
   function completeElectronic(idx){
@@ -137,7 +142,9 @@
     if (!r || r.status!=='accepted') return;
     r.status='completed';
     localStorage.setItem('ajrah_rides', JSON.stringify(rides));
-    alert('تم إتمام الرحلة إلكترونياً — خصمت العمولة تلقائياً.');
+    mockSMS(r.passenger.phone, 'أُجْرَه: اكتملت رحلتك #'+r.id+' إلكترونياً عبر '+payLabel(r.pay)+' — شكراً.');
+    mockSMS(r.driver.phone, 'أُجْرَه: اكتملت رحلتك #'+r.id+' — الصافي ' + fmtSYP(r.fare - r.fee)+' حُوّل إليك.');
+    alert('تم إتمام الرحلة إلكترونياً — أُرسلت رسالة نصية للعميل والسائق.');
     load();
   }
   function payNow(){
